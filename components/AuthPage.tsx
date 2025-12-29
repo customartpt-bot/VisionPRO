@@ -17,10 +17,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-    // Simula uma autorização rápida para entrada imediata
+    // Autorização instantânea conforme solicitado
     setTimeout(() => {
       onLogin();
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -33,7 +33,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       <div className={`glass-card w-full max-w-md rounded-3xl p-10 md:p-12 relative overflow-hidden transition-all duration-1000 transform ${isVisible ? 'translate-y-0 scale-100' : 'translate-y-12 scale-90'}`}>
         <div className="scanline-effect"></div>
         
-        <div className="flex flex-col items-center mb-10 relative z-10">
+        <div className="flex flex-col items-center mb-12 relative z-10">
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-orange-500/20 blur-2xl rounded-full"></div>
             <img 
@@ -46,36 +46,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           <div className="h-0.5 w-10 bg-orange-600 mt-2 rounded-full"></div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+        <form onSubmit={handleLogin} className="space-y-6 relative z-10">
           <div className="space-y-2">
             <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest ml-1 mono">Unit_Identity</label>
             <input 
               type="text" 
-              placeholder="ANALYST_GUEST (Opcional)" 
-              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl py-3.5 px-6 text-white placeholder:text-zinc-700 focus:outline-none focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/10 transition-all text-[11px] font-bold mono"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest ml-1 mono">Secure_Hash</label>
-            <input 
-              type="password" 
-              placeholder="••••••••••••" 
-              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl py-3.5 px-6 text-white placeholder:text-zinc-700 focus:outline-none focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/10 transition-all text-[11px] font-bold mono"
+              placeholder="ANALYST_ALPHA" 
+              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl py-4 px-6 text-white placeholder:text-zinc-700 focus:outline-none focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/10 transition-all text-[11px] font-bold mono"
             />
           </div>
 
           <button 
             type="submit"
             disabled={loading}
-            className="group w-full bg-zinc-900 border border-white/5 hover:border-orange-500/50 text-white font-black uppercase tracking-[0.3em] py-4.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 overflow-hidden relative"
+            className="group w-full bg-zinc-900 border border-white/5 hover:border-orange-500/50 text-white font-black uppercase tracking-[0.3em] py-5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 overflow-hidden relative"
           >
             <div className={`absolute inset-0 bg-orange-600 transition-transform duration-500 ${loading ? 'translate-x-0' : '-translate-x-full'} group-hover:translate-x-0 opacity-100`}></div>
             <span className="relative z-10 text-[10px] py-1 flex items-center justify-center gap-3">
               {loading ? (
                 <>
                   <i className="fas fa-sync-alt animate-spin text-white"></i>
-                  Autorizando...
+                  AUTORIZANDO...
                 </>
               ) : (
                 <>
@@ -93,18 +84,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
               className="text-[9px] font-bold text-zinc-600 hover:text-orange-500 uppercase tracking-[0.2em] transition-colors mono group"
             >
               <span className="opacity-40 group-hover:opacity-100">[</span> 
-              Acesso_Direto_Analista 
+              BYPASS_AUTH_REQUEST
               <span className="opacity-40 group-hover:opacity-100">]</span>
             </button>
           </div>
         </form>
 
-        <div className="mt-10 pt-6 border-t border-white/5 flex justify-between items-center opacity-30 mono">
-          <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">Bypass_Mode: Ativo</span>
-          <div className="flex gap-4">
-            <i className="fas fa-unlock-alt text-[10px]"></i>
-            <i className="fas fa-user-check text-[10px]"></i>
+        <div className="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-40 mono">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">AI_CORE: ONLINE</span>
           </div>
+          <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">V3.0.4_STABLE</span>
         </div>
       </div>
     </div>
