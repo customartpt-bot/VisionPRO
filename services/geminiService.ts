@@ -3,18 +3,24 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisData } from "../types";
 
 export const analyzeFootballVideo = async (videoDescription: string): Promise<AnalysisData> => {
-  // Inicialização direta e obrigatória via variável de ambiente
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  // Acesso direto à chave de ambiente conforme diretrizes
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING: O ambiente não possui uma chave configurada. Verifique as definições do projeto.");
+  }
+
+  // Instanciação imediata antes da chamada
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: `Você é o motor tático VisionPRO. Analise o vídeo de futebol descrito e gere estatísticas JSON de nível profissional.
-      Identifique padrões de jogo (ex: 4-3-3 ofensivo, bloco baixo), métricas físicas e técnicas.
+      model: "gemini-3-flash-preview",
+      contents: `Você é o analista tático VisionPRO. Extraia estatísticas detalhadas deste jogo de futebol.
+      Gere um relatório JSON completo com posse de bola, passes e desempenho individual.
       
-      Contexto: ${videoDescription}`,
+      Contexto do Vídeo: ${videoDescription}`,
       config: {
-        thinkingConfig: { thinkingBudget: 8192 }, // Máximo raciocínio para análise de scouting
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -113,9 +119,11 @@ export const analyzeFootballVideo = async (videoDescription: string): Promise<An
       }
     });
 
-    return JSON.parse(response.text || "{}");
+    const text = response.text;
+    if (!text) throw new Error("O motor de IA retornou uma resposta vazia.");
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error("VisionPRO AI Error:", error);
-    throw new Error("Erro no processamento tático automático.");
+    console.error("VisionPRO Runtime Error:", error);
+    throw new Error(error.message || "Falha crítica no processamento de vídeo.");
   }
 };
