@@ -2,7 +2,7 @@
 import React from 'react';
 
 const Header: React.FC = () => {
-  const isEngineActive = !!process.env.API_KEY || (typeof window !== 'undefined' && (window as any).aistudio);
+  const isEngineActive = !!process.env.API_KEY;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#05070a]/95 backdrop-blur-xl border-b border-orange-500/30 px-8 py-4 flex items-center justify-between overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.9)]">
