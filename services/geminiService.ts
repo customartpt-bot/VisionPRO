@@ -3,23 +3,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisData } from "../types";
 
 export const analyzeFootballVideo = async (videoDescription: string): Promise<AnalysisData> => {
-  // Acesso direto à chave de ambiente conforme diretrizes
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING: O ambiente não possui uma chave configurada. Verifique as definições do projeto.");
-  }
-
-  // Instanciação imediata antes da chamada
-  const ai = new GoogleGenAI({ apiKey });
+  // Inicialização dinâmica no momento da chamada para capturar a chave do ambiente
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Você é o analista tático VisionPRO. Extraia estatísticas detalhadas deste jogo de futebol.
-      Gere um relatório JSON completo com posse de bola, passes e desempenho individual.
+      contents: `Você é o VisionPRO Tactical Engine. Analise o vídeo e retorne um JSON com:
+      1. Estatísticas de equipa (posse, remates, passes).
+      2. Performance de jogadores (ratings, distância, velocidade).
+      3. Log tático de eventos.
       
-      Contexto do Vídeo: ${videoDescription}`,
+      Descrição: ${videoDescription}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -119,11 +114,9 @@ export const analyzeFootballVideo = async (videoDescription: string): Promise<An
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("O motor de IA retornou uma resposta vazia.");
-    return JSON.parse(text);
+    return JSON.parse(response.text || "{}");
   } catch (error: any) {
-    console.error("VisionPRO Runtime Error:", error);
-    throw new Error(error.message || "Falha crítica no processamento de vídeo.");
+    console.error("VisionPRO_Error:", error);
+    throw new Error("Falha na extração de dados táticos. Verifique a conexão com o motor de IA.");
   }
 };
