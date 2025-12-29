@@ -86,8 +86,8 @@ const VideoAnalyzer: React.FC<VideoAnalyzerProps> = ({ onAnalyze, isAnalyzing })
               <div className="space-y-3 mono">
                 <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">NEURAL_EXTRACTION_ACTIVE</h3>
                 <div className="flex flex-col gap-1">
-                   <p className="text-emerald-500 text-[9px] font-bold uppercase">>> SCANNING_PLAYERS [88%]</p>
-                   <p className="text-orange-500 text-[9px] font-bold uppercase">>> CALCULATING_METRICS [ACTIVE]</p>
+                   <p className="text-emerald-500 text-[9px] font-bold uppercase">&gt;&gt; SCANNING_PLAYERS [88%]</p>
+                   <p className="text-orange-500 text-[9px] font-bold uppercase">&gt;&gt; CALCULATING_METRICS [ACTIVE]</p>
                 </div>
               </div>
               
