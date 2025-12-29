@@ -1,0 +1,7 @@
+{
+  "name": "VisionPRO - AI Football Analyst",
+  "description": "Professional AI-driven football video analysis dashboard for scouting and tactical performance tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
