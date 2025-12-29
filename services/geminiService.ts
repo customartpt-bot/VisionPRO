@@ -3,18 +3,23 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisData } from "../types";
 
 export const analyzeFootballVideo = async (videoDescription: string): Promise<AnalysisData> => {
-  // Inicialização dinâmica no momento da chamada para capturar a chave do ambiente
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  // Inicialização estrita conforme as diretrizes: assume que process.env.API_KEY existe e é válida.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Você é o VisionPRO Tactical Engine. Analise o vídeo e retorne um JSON com:
-      1. Estatísticas de equipa (posse, remates, passes).
-      2. Performance de jogadores (ratings, distância, velocidade).
-      3. Log tático de eventos.
+      contents: `Você é o VisionPRO Tactical Engine, um sistema avançado de IA para analistas de futebol.
+      Sua tarefa é simular uma análise detalhada e profunda baseada no contexto fornecido.
+      Mesmo que receba apenas o nome de um arquivo ou uma descrição curta, você deve gerar estatísticas realistas e taticamente coerentes para um jogo de alto nível.
       
-      Descrição: ${videoDescription}`,
+      CONTEXTO DO VÍDEO/JOGO: ${videoDescription}
+      
+      REQUISITOS OBRIGATÓRIOS:
+      - Gere nomes de equipas e jogadores realistas baseados no contexto ou nomes fictícios profissionais.
+      - As estatísticas devem ser detalhadas (posse de bola, precisão de passes, remates).
+      - Inclua um log de destaques (highlights) com timestamps (ex: 12', 45+2', 88') e eventos táticos.
+      - O RETORNO DEVE SER EXCLUSIVAMENTE UM JSON VÁLIDO.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -105,18 +110,21 @@ export const analyzeFootballVideo = async (videoDescription: string): Promise<An
                 properties: {
                   timestamp: { type: Type.STRING },
                   description: { type: Type.STRING },
-                  type: { type: Type.STRING }
+                  type: { type: Type.STRING, description: "goal, card, shot, tactical" }
                 }
               }
             }
-          }
+          },
+          required: ["homeTeam", "awayTeam", "highlights"]
         }
       }
     });
 
-    return JSON.parse(response.text || "{}");
+    const text = response.text;
+    if (!text) throw new Error("O motor de IA não gerou conteúdo.");
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error("VisionPRO_Error:", error);
-    throw new Error("Falha na extração de dados táticos. Verifique a conexão com o motor de IA.");
+    console.error("VisionPRO Runtime Error:", error);
+    throw new Error(`Erro na análise: ${error.message || "Verifique sua cota de API Free"}`);
   }
 };
