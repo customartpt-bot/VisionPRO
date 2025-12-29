@@ -39,29 +39,33 @@ const IntroPage: React.FC<IntroPageProps> = ({ onFinish }) => {
     <div className={`fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center overflow-hidden transition-all duration-[1200ms] ${isExiting ? 'opacity-0 scale-110 blur-xl' : 'opacity-100'}`}>
       
       {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.1)_0%,transparent_70%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.15)_0%,transparent_70%)]"></div>
       <div className="absolute inset-0 hud-grid opacity-10"></div>
       
       <div className="relative w-full max-w-2xl px-4 flex flex-col items-center">
         
-        {/* GIF Container - Centered and Visible */}
-        <div className="relative w-full max-w-lg aspect-square flex items-center justify-center">
-          {/* Suave vinheta interna para foco */}
+        {/* GIF Container - Centered and Fully Visible */}
+        <div className="relative w-full max-w-sm aspect-square flex items-center justify-center">
+          {/* Suave vinheta interna para foco, sem esconder o centro */}
           <div className="absolute inset-0 z-10 pointer-events-none" 
                style={{
-                 background: 'radial-gradient(circle, transparent 40%, black 100%)'
+                 background: 'radial-gradient(circle, transparent 50%, black 110%)'
                }}>
           </div>
           
           <img 
-            src="https://github.com/customartpt-bot/fcbfotos/blob/main/_MConverter.eu_1000017191.gif?raw=true" 
+            src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/main/_MConverter.eu_1000017191.gif" 
             alt="VisionPRO AI Loading" 
-            className="w-full h-full object-contain relative z-0 opacity-100 scale-125"
+            className="w-full h-full object-contain relative z-0 opacity-100 scale-110"
+            onError={(e) => {
+              console.error("Erro ao carregar o logo animado");
+              e.currentTarget.src = "https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png";
+            }}
           />
 
           {/* Tactical Brackets */}
-          <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-orange-500/40 rounded-tl-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-orange-500/40 rounded-br-3xl"></div>
+          <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-orange-500/40 rounded-tl-2xl"></div>
+          <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-orange-500/40 rounded-br-2xl"></div>
         </div>
 
         {/* Terminal Status */}
@@ -82,7 +86,7 @@ const IntroPage: React.FC<IntroPageProps> = ({ onFinish }) => {
       </div>
 
       {/* Cinematic Vignette */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]"></div>
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.7)_100%)]"></div>
     </div>
   );
 };
