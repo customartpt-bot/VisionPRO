@@ -4,7 +4,7 @@ import { AnalysisData } from '../types';
 import StatsCard from './StatsCard';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Cell, PieChart, Pie, RadarChart, PolarGrid, PolarAngleAxis, Radar
+  Cell
 } from 'recharts';
 
 interface DashboardProps {
@@ -14,9 +14,23 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   if (!data) return (
     <div className="h-full flex flex-col items-center justify-center text-slate-500 p-12 text-center">
-      <i className="fas fa-chart-line text-6xl mb-6 opacity-20"></i>
-      <h3 className="text-xl font-bold text-slate-300">Awaiting Analysis</h3>
-      <p className="max-w-xs mt-2">Upload and analyze a match video to populate the dashboard with tactical insights.</p>
+      <div className="relative mb-8">
+        <i className="fas fa-chart-line text-8xl opacity-10"></i>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <i className="fas fa-futbol text-4xl text-slate-800 animate-bounce"></i>
+        </div>
+      </div>
+      <h3 className="text-2xl font-black text-white mb-2">Aguardando Recolha de Dados</h3>
+      <p className="max-w-md text-slate-400">
+        Carregue um vídeo ou selecione uma análise no histórico lateral para gerar insights automáticos da VisionPRO.
+      </p>
+      <div className="mt-8 grid grid-cols-3 gap-4 w-full max-w-sm">
+        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-full bg-orange-500 w-1/3"></div>
+        </div>
+        <div className="h-1 bg-slate-800 rounded-full"></div>
+        <div className="h-1 bg-slate-800 rounded-full"></div>
+      </div>
     </div>
   );
 
@@ -27,20 +41,32 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
 
   const allPlayers = [...data.homeTeam.players, ...data.awayTeam.players].sort((a, b) => b.rating - a.rating);
 
+  const handleShare = () => {
+    const text = `Análise VisionPRO: ${data.homeTeam.name} vs ${data.awayTeam.name}. Posse: ${data.homeTeam.stats.possession}% - ${data.awayTeam.stats.possession}%`;
+    alert("Link de partilha copiado para a área de transferência!\n\n" + text);
+  };
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-700">
       {/* Overview Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900/40 p-6 rounded-2xl border border-white/5">
         <div>
-          <h2 className="text-3xl font-black text-white">{data.homeTeam.name} vs {data.awayTeam.name}</h2>
-          <p className="text-slate-400 mt-1">Full Match Statistical Performance Overview</p>
+          <div className="flex items-center gap-2 mb-1">
+             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Análise Ativa</span>
+          </div>
+          <h2 className="text-3xl font-black text-white">{data.homeTeam.name} <span className="text-slate-600 px-2 font-normal">VS</span> {data.awayTeam.name}</h2>
+          <p className="text-slate-400 text-sm">Dashboard de Insights e Performance Coletiva</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-bold border border-white/10 transition-colors">
-            <i className="fas fa-share-nodes mr-2"></i> Share Dashboard
+          <button 
+            onClick={handleShare}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-bold border border-white/10 transition-all flex items-center gap-2"
+          >
+            <i className="fas fa-share-nodes text-sky-400"></i> Partilhar Insights
           </button>
-          <button className="px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg text-sm font-bold shadow-lg shadow-sky-500/20 transition-colors">
-            <i className="fas fa-file-pdf mr-2"></i> Export Report
+          <button className="px-4 py-2.5 bg-gradient-to-r from-sky-600 to-sky-400 hover:scale-105 rounded-xl text-sm font-black text-white shadow-lg shadow-sky-500/20 transition-all flex items-center gap-2">
+            <i className="fas fa-file-export"></i> Exportar PDF
           </button>
         </div>
       </div>
@@ -48,27 +74,27 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard 
-          label="Ball Possession" 
+          label="Posse de Bola" 
           homeValue={data.homeTeam.stats.possession} 
           awayValue={data.awayTeam.stats.possession} 
           icon="fa-futbol" 
           percentage
         />
         <StatsCard 
-          label="Pass Accuracy" 
+          label="Precisão de Passe" 
           homeValue={Math.round((data.homeTeam.stats.passesCompleted / data.homeTeam.stats.passesTotal) * 100)} 
           awayValue={Math.round((data.awayTeam.stats.passesCompleted / data.awayTeam.stats.passesTotal) * 100)} 
           icon="fa-arrows-rotate" 
           percentage
         />
         <StatsCard 
-          label="Total Shots" 
+          label="Remates Totais" 
           homeValue={data.homeTeam.stats.shotsTotal} 
           awayValue={data.awayTeam.stats.shotsTotal} 
           icon="fa-crosshairs" 
         />
         <StatsCard 
-          label="Shots on Target" 
+          label="No Alvo" 
           homeValue={data.homeTeam.stats.shotsOnTarget} 
           awayValue={data.awayTeam.stats.shotsOnTarget} 
           icon="fa-bullseye" 
@@ -76,11 +102,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pass Volume Chart */}
         <div className="lg:col-span-2 glass-card rounded-2xl p-6 border border-white/10">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
             <i className="fas fa-chart-simple text-sky-400"></i>
-            Passing Volume & Distribution
+            Volume de Passes e Eficácia
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -102,32 +127,30 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           </div>
         </div>
 
-        {/* Highlights List */}
         <div className="glass-card rounded-2xl p-6 border border-white/10">
           <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
             <i className="fas fa-list-check text-orange-400"></i>
-            Tactical Highlights
+            Eventos Recolhidos
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
             {data.highlights.map((h, i) => (
               <div key={i} className="group p-3 bg-slate-800/30 rounded-xl border border-white/5 hover:border-white/20 transition-all">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-black text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded uppercase">{h.type}</span>
-                  <span className="text-xs text-slate-500 font-mono">{h.timestamp}</span>
+                  <span className="text-[10px] font-black text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded uppercase">{h.type}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{h.timestamp}</span>
                 </div>
-                <p className="text-sm text-slate-200 leading-relaxed">{h.description}</p>
+                <p className="text-xs text-slate-200 leading-relaxed">{h.description}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Individual Player Matrix */}
       <div className="glass-card rounded-2xl overflow-hidden border border-white/10">
-        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-slate-900/20">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <i className="fas fa-users-viewfinder text-sky-400"></i>
-            Individual Player Insights
+            Métricas Individuais (Recolha IA)
           </h3>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 mr-4">
@@ -144,12 +167,11 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-800/50 text-[10px] text-slate-400 font-black uppercase tracking-widest border-b border-white/5">
-                <th className="px-6 py-4">Player</th>
+                <th className="px-6 py-4">Jogador</th>
                 <th className="px-6 py-4 text-center">Pos</th>
-                <th className="px-6 py-4 text-center">Distance</th>
-                <th className="px-6 py-4 text-center">Top Speed</th>
-                <th className="px-6 py-4 text-center">Pass Acc</th>
-                <th className="px-6 py-4 text-center">Rating</th>
+                <th className="px-6 py-4 text-center">Distância</th>
+                <th className="px-6 py-4 text-center">Passe %</th>
+                <th className="px-6 py-4 text-center">Rating Vision</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -169,10 +191,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-xs text-slate-300 font-medium px-2 py-0.5 bg-slate-800 rounded">{p.position}</span>
+                      <span className="text-[10px] text-slate-300 font-bold px-2 py-0.5 bg-slate-800 rounded uppercase">{p.position}</span>
                     </td>
-                    <td className="px-6 py-4 text-center text-sm font-mono text-slate-300">{p.distanceCovered.toFixed(2)} km</td>
-                    <td className="px-6 py-4 text-center text-sm font-mono text-slate-300">{p.topSpeed} km/h</td>
+                    <td className="px-6 py-4 text-center text-sm font-mono text-slate-400">{p.distanceCovered.toFixed(2)} km</td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
                         <span className="text-xs font-bold text-white">{p.passAccuracy}%</span>
@@ -182,7 +203,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border-2 border-orange-500/30 font-black text-orange-400">
+                      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 border font-black ${p.rating >= 8 ? 'text-emerald-400 border-emerald-500/30' : 'text-orange-400 border-orange-500/30'}`}>
                         {p.rating.toFixed(1)}
                       </div>
                     </td>
