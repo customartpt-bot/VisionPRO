@@ -3,14 +3,13 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisData } from "../types";
 
 export const analyzeFootballVideo = async (videoDescription: string): Promise<AnalysisData> => {
-  // Inicialização direta: assume que a chave está presente no ambiente conforme as diretrizes
+  // Inicialização estrita conforme as diretrizes para garantir uso da chave injetada
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Analise este jogo de futebol e retorne um relatório técnico em JSON. 
-      Contexto: ${videoDescription}`,
+      contents: "Analise este jogo e retorne um JSON tático. Contexto: " + videoDescription,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -111,9 +110,14 @@ export const analyzeFootballVideo = async (videoDescription: string): Promise<An
       }
     });
 
-    return JSON.parse(response.text || "{}");
+    const text = response.text;
+    if (!text) throw new Error("ERRO_RESPOSTA_VAZIA");
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error("VisionPRO Runtime Error:", error);
-    throw new Error("Sistema de Análise Indisponível. Tente novamente em instantes.");
+    console.error("VisionPRO AI Error:", error);
+    if (error.message?.includes("API key") || error.message?.includes("403") || error.message?.includes("401")) {
+      throw new Error("AUTH_REQUIRED: Sincronização de motor necessária.");
+    }
+    throw new Error("Falha no processamento tático. Verifique a ligação.");
   }
 };
