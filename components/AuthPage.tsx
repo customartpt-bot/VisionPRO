@@ -17,10 +17,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoading(true);
-    // Autorização instantânea conforme solicitado
     setTimeout(() => {
       onLogin();
-    }, 800);
+    }, 600);
   };
 
   return (
@@ -48,54 +47,32 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
 
         <form onSubmit={handleLogin} className="space-y-6 relative z-10">
           <div className="space-y-2">
-            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest ml-1 mono">Unit_Identity</label>
+            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest ml-1 mono">Analyst_Designation</label>
             <input 
               type="text" 
-              placeholder="ANALYST_ALPHA" 
-              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl py-4 px-6 text-white placeholder:text-zinc-700 focus:outline-none focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/10 transition-all text-[11px] font-bold mono"
+              defaultValue="ALPHA_SCOUT" 
+              className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl py-4 px-6 text-white focus:outline-none focus:border-orange-500/40 transition-all text-[11px] font-bold mono"
             />
           </div>
 
           <button 
             type="submit"
             disabled={loading}
-            className="group w-full bg-zinc-900 border border-white/5 hover:border-orange-500/50 text-white font-black uppercase tracking-[0.3em] py-5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 overflow-hidden relative"
+            className="group w-full bg-zinc-950 border border-white/5 hover:border-orange-500/50 text-white font-black uppercase tracking-[0.3em] py-5 rounded-xl transition-all active:scale-[0.98] relative overflow-hidden"
           >
-            <div className={`absolute inset-0 bg-orange-600 transition-transform duration-500 ${loading ? 'translate-x-0' : '-translate-x-full'} group-hover:translate-x-0 opacity-100`}></div>
+            <div className={`absolute inset-0 bg-orange-600 transition-transform duration-500 ${loading ? 'translate-x-0' : '-translate-x-full'} group-hover:translate-x-0`}></div>
             <span className="relative z-10 text-[10px] py-1 flex items-center justify-center gap-3">
-              {loading ? (
-                <>
-                  <i className="fas fa-sync-alt animate-spin text-white"></i>
-                  AUTORIZANDO...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-shield-halved text-orange-500 group-hover:text-white transition-colors"></i>
-                  Entrar no Sistema
-                </>
-              )}
+              {loading ? 'AUTORIZANDO...' : 'ENTRAR NO SISTEMA'}
             </span>
           </button>
-          
-          <div className="text-center pt-2">
-            <button 
-              type="button"
-              onClick={() => handleLogin()}
-              className="text-[9px] font-bold text-zinc-600 hover:text-orange-500 uppercase tracking-[0.2em] transition-colors mono group"
-            >
-              <span className="opacity-40 group-hover:opacity-100">[</span> 
-              BYPASS_AUTH_REQUEST
-              <span className="opacity-40 group-hover:opacity-100">]</span>
-            </button>
-          </div>
         </form>
 
-        <div className="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-40 mono">
+        <div className="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-30 mono">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">AI_CORE: ONLINE</span>
+            <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">DATA_SYNC: ACTIVE</span>
           </div>
-          <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">V3.0.4_STABLE</span>
+          <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter">V3.0.4</span>
         </div>
       </div>
     </div>
