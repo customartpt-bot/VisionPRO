@@ -185,6 +185,11 @@ const AnalysisConsole: React.FC = () => {
       if (matchData) {
           if (matchData.current_game_seconds) setTimerSeconds(matchData.current_game_seconds);
           if (matchData.current_half) setCurrentHalf(matchData.current_half as 1 | 2);
+          
+          // Carregar posse de bola guardada
+          const savedHome = matchData.possession_home || 0;
+          const savedAway = matchData.possession_away || 0;
+          setPossession({ home: savedHome, away: savedAway });
       }
       
       const { data: playerData } = await supabase.from('players').select('*').eq('match_id', id);
@@ -261,13 +266,23 @@ const AnalysisConsole: React.FC = () => {
         clearInterval(possessionInterval.current);
     }
 
-    if (activePossession) {
+    if (activePossession && id) {
       possessionInterval.current = window.setInterval(() => {
-        setPossession(prev => ({ ...prev, [activePossession]: prev[activePossession] + 1 }));
+        setPossession(prev => {
+           const nextVal = prev[activePossession] + 1;
+           
+           // Sincronizar com BD a cada 5 segundos para não sobrecarregar
+           if (nextVal % 5 === 0) {
+              const updateKey = activePossession === 'home' ? 'possession_home' : 'possession_away';
+              supabase.from('matches').update({ [updateKey]: nextVal }).eq('id', id).then();
+           }
+           
+           return { ...prev, [activePossession]: nextVal };
+        });
       }, 1000);
     }
     return () => { if (possessionInterval.current) clearInterval(possessionInterval.current); };
-  }, [activePossession]); 
+  }, [activePossession, id]); 
 
   // Voice Logic
   useEffect(() => {
