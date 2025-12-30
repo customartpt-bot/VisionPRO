@@ -1,7 +1,0 @@
-{
-  "name": "PROVision - Análise Inteligente do Jogo",
-  "description": "Uma plataforma profissional de análise de futebol integrada com YouTube e Supabase para recolha de dados em tempo real e visualização de dashboards.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
-}
