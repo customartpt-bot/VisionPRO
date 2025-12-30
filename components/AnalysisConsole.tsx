@@ -188,6 +188,8 @@ const AnalysisConsole: React.FC = () => {
             setEvents(prev => {
                 const exists = prev.find(e => e.id === payload.new.id);
                 if (exists) return prev;
+                // Fetch player info for the new event if needed, but for now just raw
+                // We really should fetch the join, but for realtime display raw is ok or optimistic
                 return [payload.new as MatchEvent, ...prev];
             });
          } else if (payload.eventType === 'DELETE') {
@@ -373,14 +375,20 @@ const AnalysisConsole: React.FC = () => {
       }
 
       if (!window.confirm("Pretende anular este evento permanentemente?")) return;
+      
+      // Optimistic update: Remove from UI immediately
+      const previousEvents = [...events];
+      setEvents(prev => prev.filter(ev => ev.id !== eventId));
 
       const { error } = await supabase.from('match_events').delete().eq('id', eventId);
       
       if (error) {
           console.error("Erro ao apagar evento:", error);
-          alert("Erro de permissão: Não foi possível apagar o evento na base de dados (verifique o SQL RLS).");
+          // Revert UI if it fails
+          setEvents(previousEvents);
+          alert(`Erro: Não foi possível apagar o evento. Verifique se tem permissões.\nDetalhe: ${error.message}`);
       } else {
-          setEvents(prev => prev.filter(ev => ev.id !== eventId));
+          // Success update score if needed
           if (type === 'goal') {
               updateMatchScore(team, -1);
           }
