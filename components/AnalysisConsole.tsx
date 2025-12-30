@@ -16,11 +16,9 @@ interface IWindow extends Window {
 
 // Helper para gerar UUIDs válidos compatíveis com Postgres
 const generateUUID = () => {
-    // Tenta usar a API nativa de crypto se disponível
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    // Fallback para ambientes antigos
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
@@ -60,7 +58,6 @@ const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div className="bg-dark-card border border-dark-border rounded-xl p-3 flex flex-col justify-between relative overflow-hidden group select-none hover:border-gray-600 transition-colors h-full">
-       {/* Active Indicators for Possession */}
        {homeActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>}
        {awayActive && <div className="absolute right-0 top-0 bottom-0 w-1 bg-brand animate-pulse shadow-[0_0_10px_rgba(255,77,0,0.5)]"></div>}
 
@@ -91,7 +88,6 @@ const StatCard: React.FC<StatCardProps> = ({
           </button>
        </div>
 
-       {/* Progress Bar */}
        {progressBar && (
            <div className="h-1 w-full bg-dark-surface rounded-full overflow-hidden flex relative mt-auto">
               <div className="absolute left-1/2 top-0 bottom-0 w-px bg-dark-bg z-10"></div>
@@ -128,6 +124,9 @@ const AnalysisConsole: React.FC = () => {
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [activeTab, setActiveTab] = useState<'collective' | 'individual'>('collective');
   
+  // Estado da Parte do Jogo
+  const [currentHalf, setCurrentHalf] = useState<1 | 2>(1);
+
   // Game Timer State
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -139,7 +138,7 @@ const AnalysisConsole: React.FC = () => {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  // Time without shot calculation (Per Team)
+  // Time without shot calculation
   const timeSinceShot = useMemo(() => {
     const calcTeamTime = (team: 'home' | 'away') => {
         const teamShots = events.filter(e => 
@@ -182,9 +181,10 @@ const AnalysisConsole: React.FC = () => {
     const loadData = async () => {
       const { data: matchData } = await supabase.from('matches').select('*').eq('id', id).single();
       setMatch(matchData);
-      // Carregar tempo guardado se existir
-      if (matchData && matchData.current_game_seconds) {
-          setTimerSeconds(matchData.current_game_seconds);
+      
+      if (matchData) {
+          if (matchData.current_game_seconds) setTimerSeconds(matchData.current_game_seconds);
+          if (matchData.current_half) setCurrentHalf(matchData.current_half as 1 | 2);
       }
       
       const { data: playerData } = await supabase.from('players').select('*').eq('match_id', id);
@@ -201,8 +201,6 @@ const AnalysisConsole: React.FC = () => {
             setEvents(prev => {
                 const exists = prev.find(e => e.id === payload.new.id);
                 if (exists) return prev;
-                // Fetch player info for the new event if needed, but for now just raw
-                // We really should fetch the join, but for realtime display raw is ok or optimistic
                 return [payload.new as MatchEvent, ...prev];
             });
          } else if (payload.eventType === 'DELETE') {
@@ -216,11 +214,9 @@ const AnalysisConsole: React.FC = () => {
   // Main Game Timer Logic
   useEffect(() => {
     if (isTimerRunning) {
-      // Iniciar intervalo
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds(prev => {
             const next = prev + 1;
-            // Opcional: Gravar a cada 10 segundos para persistência automática
             if (next % 10 === 0 && id) {
                  supabase.from('matches').update({ current_game_seconds: next }).eq('id', id).then();
             }
@@ -228,22 +224,23 @@ const AnalysisConsole: React.FC = () => {
         });
       }, 1000);
     } else {
-       // Limpar intervalo se parado
        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-    
-    // Cleanup ao desmontar
     return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
   }, [isTimerRunning, id]);
 
-  // Função para salvar tempo ao pausar
   const toggleTimer = async () => {
       const newState = !isTimerRunning;
       setIsTimerRunning(newState);
-      
-      // Se pausou, grava o tempo atual na BD para garantir sincronia
       if (!newState && id) {
           await supabase.from('matches').update({ current_game_seconds: timerSeconds }).eq('id', id);
+      }
+  };
+
+  const updateHalf = async (half: 1 | 2) => {
+      setCurrentHalf(half);
+      if (id) {
+          await supabase.from('matches').update({ current_half: half }).eq('id', id);
       }
   };
 
@@ -269,7 +266,6 @@ const AnalysisConsole: React.FC = () => {
         setPossession(prev => ({ ...prev, [activePossession]: prev[activePossession] + 1 }));
       }, 1000);
     }
-    
     return () => { if (possessionInterval.current) clearInterval(possessionInterval.current); };
   }, [activePossession]); 
 
@@ -318,8 +314,6 @@ const AnalysisConsole: React.FC = () => {
 
     const videoTime = playerRef.current?.getCurrentTime() || 0;
     const matchMinute = Math.floor(timerSeconds / 60) + 1; 
-
-    // GERA UUID VÁLIDO (CORREÇÃO DO ERRO)
     const validUUID = generateUUID();
 
     const optimisticEvent: any = {
@@ -337,8 +331,8 @@ const AnalysisConsole: React.FC = () => {
 
     setEvents(prev => [optimisticEvent, ...prev]);
 
-    const { data, error } = await supabase.from('match_events').insert([{
-        id: validUUID, // Envia o UUID gerado explicitamente
+    const { error } = await supabase.from('match_events').insert([{
+        id: validUUID,
         match_id: id,
         type,
         team,
@@ -350,7 +344,6 @@ const AnalysisConsole: React.FC = () => {
 
     if (error) {
         console.error("Erro ao gravar evento:", error);
-        // Remove optimistic update on error
         setEvents(prev => prev.filter(e => e.id !== validUUID));
         return;
     }
@@ -385,15 +378,9 @@ const AnalysisConsole: React.FC = () => {
 
   const deleteEvent = async (eventId: string, type: EventType, team: 'home' | 'away', e: React.MouseEvent) => {
       e.stopPropagation();
-      
-      // Validação de Permissão: Todos os roles excepto dashboard podem apagar
-      if (role === 'dashboard') {
-          return;
-      }
-
+      if (role === 'dashboard') return;
       if (!window.confirm("Pretende anular este evento permanentemente?")) return;
       
-      // Optimistic update: Remove from UI immediately
       const previousEvents = [...events];
       setEvents(prev => prev.filter(ev => ev.id !== eventId));
 
@@ -401,37 +388,22 @@ const AnalysisConsole: React.FC = () => {
       
       if (error) {
           console.error("Erro ao apagar evento:", error);
-          // Revert UI if it fails
           setEvents(previousEvents);
-          alert(`Erro: Não foi possível apagar o evento. Verifique se tem permissões.\nDetalhe: ${error.message}`);
+          alert(`Erro: Não foi possível apagar o evento. Detalhe: ${error.message}`);
       } else {
-          // Success update score if needed
-          if (type === 'goal') {
-              updateMatchScore(team, -1);
-          }
+          if (type === 'goal') updateMatchScore(team, -1);
       }
   };
   
-  // NOVA FUNÇÃO DE RESET
   const resetTimer = async () => {
       if(!window.confirm("Reiniciar cronómetro de jogo para 00:00?")) return;
-      
-      // 1. Parar a contagem localmente
       setIsTimerRunning(false);
-      
-      // 2. Limpar o intervalo existente
       if (timerIntervalRef.current) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
       }
-      
-      // 3. Reset do estado visual
       setTimerSeconds(0);
-      
-      // 4. Reset na base de dados para persistência
-      if (id) {
-          await supabase.from('matches').update({ current_game_seconds: 0 }).eq('id', id);
-      }
+      if (id) await supabase.from('matches').update({ current_game_seconds: 0 }).eq('id', id);
   }
 
   const handleTimeEdit = (minutes: string) => {
@@ -447,7 +419,6 @@ const AnalysisConsole: React.FC = () => {
      return `${m}:${s}`;
   }
 
-  // Cálculo de estatísticas e resultado ao vivo
   const liveScore = useMemo(() => {
     return {
         home: events.filter(e => e.team === 'home' && e.type === 'goal').length,
@@ -457,7 +428,6 @@ const AnalysisConsole: React.FC = () => {
 
   const stats = React.useMemo(() => {
     const calc = (team: 'home' | 'away', type: EventType) => events.filter(e => e.team === team && e.type === type).length;
-    
     return {
       home: { 
           goals: calc('home', 'goal'),
@@ -491,11 +461,8 @@ const AnalysisConsole: React.FC = () => {
   const totalTime = possession.home + possession.away || 1;
   const homePossessionPct = Math.round((possession.home / totalTime) * 100);
 
-  // Formatação do tempo
   const displayMinutes = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
   const displaySeconds = (timerSeconds % 60).toString().padStart(2, '0');
-
-  // Permissões para apagar - TODOS MENOS DASHBOARD
   const canDelete = role !== 'dashboard';
 
   return (
@@ -520,6 +487,22 @@ const AnalysisConsole: React.FC = () => {
            {/* Live Score */}
            <div className="text-3xl font-mono font-bold text-white tracking-widest leading-none">
              {liveScore.home}<span className="text-brand mx-2">:</span>{liveScore.away}
+           </div>
+
+           {/* Half Selector */}
+           <div className="flex items-center gap-1 bg-black/40 p-1 rounded border border-dark-border/30">
+              <button 
+                onClick={() => updateHalf(1)} 
+                className={`text-[9px] font-bold px-2 py-1 rounded transition-colors uppercase ${currentHalf === 1 ? 'bg-brand text-black' : 'text-gray-500 hover:text-white'}`}
+              >
+                1ª P
+              </button>
+              <button 
+                onClick={() => updateHalf(2)} 
+                className={`text-[9px] font-bold px-2 py-1 rounded transition-colors uppercase ${currentHalf === 2 ? 'bg-brand text-black' : 'text-gray-500 hover:text-white'}`}
+              >
+                2ª P
+              </button>
            </div>
            
            <div className="h-8 w-px bg-dark-border"></div>
