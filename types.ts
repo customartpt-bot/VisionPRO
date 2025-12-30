@@ -20,6 +20,7 @@ export interface Match {
   away_score: number;
   status: 'scheduled' | 'live' | 'finished';
   current_game_seconds?: number; // Novo campo para persistência do tempo
+  current_half?: number; // 1 ou 2
   created_at?: string;
 }
 
