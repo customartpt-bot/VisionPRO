@@ -1,8 +1,0 @@
-
-{
-  "name": "VisionPRO - Terminal Tático Manual",
-  "description": "Consola de análise de jogo profissional com tagging por voz e atalhos de teclado para precisão absoluta.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
-}
