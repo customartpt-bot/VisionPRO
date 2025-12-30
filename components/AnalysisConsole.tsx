@@ -14,6 +14,19 @@ interface IWindow extends Window {
   SpeechRecognition: any;
 }
 
+// Helper para gerar UUIDs válidos compatíveis com Postgres
+const generateUUID = () => {
+    // Tenta usar a API nativa de crypto se disponível
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    // Fallback para ambientes antigos
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+};
+
 // Componente Cartão de Estatística (Estilo Dashboard)
 interface StatCardProps {
   title: string;
@@ -306,9 +319,11 @@ const AnalysisConsole: React.FC = () => {
     const videoTime = playerRef.current?.getCurrentTime() || 0;
     const matchMinute = Math.floor(timerSeconds / 60) + 1; 
 
-    const tempId = Math.random().toString(36).substr(2, 9);
+    // GERA UUID VÁLIDO (CORREÇÃO DO ERRO)
+    const validUUID = generateUUID();
+
     const optimisticEvent: any = {
-      id: tempId,
+      id: validUUID,
       match_id: id,
       type,
       team,
@@ -323,6 +338,7 @@ const AnalysisConsole: React.FC = () => {
     setEvents(prev => [optimisticEvent, ...prev]);
 
     const { data, error } = await supabase.from('match_events').insert([{
+        id: validUUID, // Envia o UUID gerado explicitamente
         match_id: id,
         type,
         team,
@@ -334,7 +350,8 @@ const AnalysisConsole: React.FC = () => {
 
     if (error) {
         console.error("Erro ao gravar evento:", error);
-        setEvents(prev => prev.filter(e => e.id !== tempId));
+        // Remove optimistic update on error
+        setEvents(prev => prev.filter(e => e.id !== validUUID));
         return;
     }
 
