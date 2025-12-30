@@ -21,6 +21,8 @@ export interface Match {
   status: 'scheduled' | 'live' | 'finished';
   current_game_seconds?: number; // Novo campo para persistência do tempo
   current_half?: number; // 1 ou 2
+  possession_home?: number; // Segundos
+  possession_away?: number; // Segundos
   created_at?: string;
 }
 
