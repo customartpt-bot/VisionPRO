@@ -304,6 +304,7 @@ const CoachDashboard: React.FC = () => {
                           <StatCard title="Faltas Cometidas" icon={Hand} homeValue={stats.home.foulsCommitted} awayValue={stats.away.foulsCommitted} />
                           <StatCard title="Faltas Sofridas" icon={ShieldAlert} homeValue={stats.home.foulsWon} awayValue={stats.away.foulsWon} />
                           <StatCard title="Cartão Amarelo" icon={RectangleHorizontal} homeValue={stats.home.yellow} awayValue={stats.away.yellow} />
+                          <StatCard title="Cartão Vermelho" icon={RectangleHorizontal} homeValue={stats.home.red} awayValue={stats.away.red} />
                           <StatCard title="Perda Bola" icon={AlertTriangle} homeValue={stats.home.loss} awayValue={stats.away.loss} />
                           <StatCard title="Recuperação" icon={Shield} homeValue={stats.home.recovery} awayValue={stats.away.recovery} />
                           <StatCard title="Cantos" icon={Activity} homeValue={stats.home.corners} awayValue={stats.away.corners} />
