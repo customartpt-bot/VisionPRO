@@ -23,15 +23,29 @@ const StatCard: React.FC<StatCardProps> = ({
   title, icon: Icon, homeValue, awayValue, helperText, progressBar = true 
 }) => {
   let homePercent = 50;
-  if (typeof homeValue !== 'string') {
-      const hVal = typeof homeValue === 'number' ? homeValue : 0;
+  
+  if (typeof homeValue === 'string' && homeValue.includes(':')) {
+      // Se for tempo, tenta calcular percentagem se possível, ou mantem 50%
+      // Para simplificar no dashboard, se for string formatada, assumimos 50% ou parseamos se necessário
+      // Aqui vamos tentar parsear "MM:SS" para segundos para a barra
+      const parseTime = (t: string) => {
+          const parts = t.split(':');
+          return parts.length === 2 ? parseInt(parts[0]) * 60 + parseInt(parts[1]) : 0;
+      }
+      const hSec = parseTime(homeValue);
+      const aSec = parseTime(awayValue as string);
+      const total = hSec + aSec;
+      homePercent = total === 0 ? 50 : (hSec / total) * 100;
+
+  } else if (typeof homeValue === 'number') {
+      const hVal = homeValue;
       const aVal = typeof awayValue === 'number' ? awayValue : 0;
       const total = hVal + aVal;
       homePercent = total === 0 ? 50 : (hVal / total) * 100;
   }
 
   return (
-    <div className="bg-dark-card border border-dark-border rounded-xl p-3 flex flex-col justify-between h-full shadow-lg">
+    <div className="bg-dark-card border border-dark-border rounded-xl p-3 flex flex-col justify-between h-full shadow-lg relative overflow-hidden">
        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="p-1 rounded bg-dark-surface text-gray-500">
@@ -152,7 +166,7 @@ const CoachDashboard: React.FC = () => {
       })
       .subscribe();
 
-    // 2. Subscribe to Match Updates (Timer, Score, Half)
+    // 2. Subscribe to Match Updates (Timer, Score, Half, Possession)
     const matchSub = supabase
       .channel('dashboard_match')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
@@ -276,6 +290,14 @@ const CoachDashboard: React.FC = () => {
               {activeTab === 'collective' ? (
                  <div className="flex flex-col gap-6">
                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 content-start">
+                          <StatCard 
+                              title="Posse Real (Tempo)"
+                              icon={Clock}
+                              homeValue={formatTimeSimple(match?.possession_home || 0)}
+                              awayValue={formatTimeSimple(match?.possession_away || 0)}
+                              progressBar={true}
+                              helperText="Tempo"
+                          />
                           <StatCard title="Golos" icon={Goal} homeValue={stats.home.goals} awayValue={stats.away.goals} />
                           <StatCard title="Remate Alvo" icon={Crosshair} homeValue={stats.home.shotsOn} awayValue={stats.away.shotsOn} />
                           <StatCard title="Remate Fora" icon={Ban} homeValue={stats.home.shotsOff} awayValue={stats.away.shotsOff} />
