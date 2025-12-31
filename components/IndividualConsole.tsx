@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactPlayer from 'react-player/youtube';
 import { supabase } from '../services/supabaseClient';
@@ -17,21 +18,18 @@ const generateUUID = () => {
     });
 };
 
-// Helper Icon
 const BanIcon = ({size}: {size:number}) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
 );
 
 // --- COMPONENTES DE LINHA ---
 
-// 1. Linha da NOSSA EQUIPA (Compacta)
 const OurPlayerRow: React.FC<{ 
     player: Player, 
     onAction: (type: EventType) => void,
     isOnPitch: boolean 
 }> = ({ player, onAction, isOnPitch }) => (
   <div className={`flex items-center gap-1 bg-dark-bg p-1 rounded border transition-all group mb-1 ${isOnPitch ? 'border-dark-border hover:border-brand/50' : 'border-dark-border opacity-50 hover:opacity-100'}`}>
-    {/* Avatar & Nome */}
     <div className="flex items-center gap-2 min-w-[100px]">
         <div className={`w-6 h-6 rounded flex items-center justify-center font-mono font-bold text-xs border ${isOnPitch ? 'bg-brand/10 text-brand border-brand/20' : 'bg-dark-surface text-gray-500 border-dark-border'}`}>
             {player.number}
@@ -41,11 +39,8 @@ const OurPlayerRow: React.FC<{
         </div>
     </div>
 
-    {/* Ações */}
     {isOnPitch ? (
         <div className="flex-1 flex justify-end gap-2 select-none">
-            
-            {/* GRUPO: PASSE */}
             <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Passe</span>
                 <div className="flex gap-0.5">
@@ -54,7 +49,6 @@ const OurPlayerRow: React.FC<{
                 </div>
             </div>
 
-            {/* GRUPO: REMATE */}
             <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Remate</span>
                 <div className="flex gap-0.5">
@@ -63,7 +57,6 @@ const OurPlayerRow: React.FC<{
                 </div>
             </div>
 
-            {/* GRUPO: GOLO */}
             <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-brand/70 font-bold uppercase tracking-tighter">Golo</span>
                 <div className="flex gap-0.5">
@@ -72,7 +65,6 @@ const OurPlayerRow: React.FC<{
                 </div>
             </div>
 
-            {/* GRUPO: DISCIPLINA */}
             <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Discipl.</span>
                 <div className="flex gap-0.5">
@@ -83,7 +75,6 @@ const OurPlayerRow: React.FC<{
                 </div>
             </div>
 
-             {/* GRUPO: SUB */}
              <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Sub</span>
                 <button onClick={() => onAction('sub_out')} className="w-7 h-6 flex items-center justify-center rounded bg-gray-800 text-gray-500 hover:bg-white hover:text-black border border-gray-600 transition" title="Sair"><UserMinus size={12} /></button>
@@ -100,7 +91,6 @@ const OurPlayerRow: React.FC<{
   </div>
 );
 
-// 2. Linha do ADVERSÁRIO (Com Labels e Sub)
 const OpponentPlayerRow: React.FC<{ 
     player: Player, 
     onAction: (type: EventType) => void,
@@ -118,13 +108,10 @@ const OpponentPlayerRow: React.FC<{
 
       {isOnPitch ? (
         <div className="flex-1 flex justify-end gap-2 select-none">
-             {/* GOLO */}
              <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Golo</span>
                 <button onClick={() => onAction('goal')} className="w-7 h-6 flex items-center justify-center rounded bg-brand/20 text-brand hover:bg-brand hover:text-black border border-brand/30 transition" title="Golo"><Goal size={12} /></button>
              </div>
-
-             {/* DISCIPLINA */}
              <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Discipl.</span>
                 <div className="flex gap-0.5">
@@ -132,8 +119,6 @@ const OpponentPlayerRow: React.FC<{
                     <button onClick={() => onAction('red_card')} className="w-6 h-6 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-black border border-red-500/20 transition" title="Vermelho"><Square size={10} fill="currentColor" /></button>
                 </div>
              </div>
-
-             {/* SUB */}
              <div className="flex flex-col items-center gap-0.5 border-l border-dark-border/50 pl-1">
                 <span className="text-[7px] text-gray-600 font-bold uppercase tracking-tighter">Sub</span>
                 <button onClick={() => onAction('sub_out')} className="w-7 h-6 flex items-center justify-center rounded bg-gray-800 text-gray-500 hover:bg-white hover:text-black border border-gray-600 transition" title="Sair"><UserMinus size={12} /></button>
@@ -149,7 +134,6 @@ const OpponentPlayerRow: React.FC<{
     </div>
 );
 
-
 const IndividualConsole: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -160,11 +144,8 @@ const IndividualConsole: React.FC = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]); 
   const [serverGameTime, setServerGameTime] = useState(0); 
-
-  // Estado Local de Quem está em Campo (Map<PlayerID, boolean>)
   const [playersOnPitch, setPlayersOnPitch] = useState<Record<string, boolean>>({});
 
-  // Initial Load
   useEffect(() => {
     if (!id) return;
 
@@ -176,21 +157,19 @@ const IndividualConsole: React.FC = () => {
       const { data: playerData } = await supabase.from('players').select('*').eq('match_id', id).order('number', { ascending: true });
       if (playerData) {
           setPlayers(playerData);
-          // Inicializar estado dos jogadores (Baseado em is_starter e eventos passados)
           const initialPitchState: Record<string, boolean> = {};
-          playerData.forEach(p => {
-              initialPitchState[p.id] = p.is_starter;
-          });
+          playerData.forEach(p => { initialPitchState[p.id] = p.is_starter; });
           setPlayersOnPitch(initialPitchState);
       }
       
-      const { data: evs } = await supabase.from('match_events').select('*, player:players(name)').eq('match_id', id).order('created_at', {ascending: false}).limit(20);
+      const { data: evs } = await supabase.from('match_events').select('*, player:players(name, number)').eq('match_id', id).order('created_at', {ascending: false}).limit(40);
       if(evs) setEvents(evs);
     };
     loadData();
 
+    // Sincronização em tempo real da tabela Matches (Tempo e Placar)
     const matchSub = supabase
-      .channel('individual_console_match')
+      .channel('individual_console_match_sync')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
           const newMatch = payload.new as Match;
           setMatch(newMatch);
@@ -198,40 +177,47 @@ const IndividualConsole: React.FC = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(matchSub); };
-  }, [id]);
+    // Sincronização em tempo real de Eventos (Golos de outros analistas, etc)
+    const eventSub = supabase
+      .channel('individual_console_events_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+             setEvents(prev => {
+                const exists = prev.find(e => e.id === payload.new.id);
+                if (exists) return prev;
+                return [payload.new as MatchEvent, ...prev].slice(0, 40);
+             });
+          } else if (payload.eventType === 'DELETE') {
+             setEvents(prev => prev.filter(e => e.id !== payload.old.id));
+          }
+      })
+      .subscribe();
 
+    return () => { 
+      supabase.removeChannel(matchSub); 
+      supabase.removeChannel(eventSub);
+    };
+  }, [id]);
 
   const addEvent = async (type: EventType, team: 'home' | 'away', playerId?: string) => {
     if (!match || !id) return;
 
-    // VALIDAÇÃO 11 JOGADORES
     if (type === 'sub_in') {
         const teamPlayers = players.filter(p => p.team === team);
-        const activeCount = teamPlayers.filter(p => {
-             // Se houver registo explícito no estado local, usar esse. Se não, usar is_starter (estado inicial)
-             if (playersOnPitch[p.id] !== undefined) return playersOnPitch[p.id];
-             return p.is_starter;
-        }).length;
-
+        const activeCount = teamPlayers.filter(p => playersOnPitch[p.id] !== undefined ? playersOnPitch[p.id] : p.is_starter).length;
         if (activeCount >= 11) {
-            alert("Limite de 11 jogadores atingido. Por favor, registe a saída de um jogador antes de adicionar uma entrada.");
+            alert("Limite de 11 jogadores atingido.");
             return;
         }
     }
 
-    // IMPORTANTE: Garantir que o player está a correr para obter o tempo correto
     const videoTime = playerRef.current?.getCurrentTime() || 0;
     const matchMinute = Math.floor(serverGameTime / 60) + 1; 
     const validUUID = generateUUID();
 
-    // Atualizar estado local de subs
     if (playerId) {
-        if (type === 'sub_out') {
-            setPlayersOnPitch(prev => ({ ...prev, [playerId]: false }));
-        } else if (type === 'sub_in') {
-            setPlayersOnPitch(prev => ({ ...prev, [playerId]: true }));
-        }
+        if (type === 'sub_out') setPlayersOnPitch(prev => ({ ...prev, [playerId]: false }));
+        else if (type === 'sub_in') setPlayersOnPitch(prev => ({ ...prev, [playerId]: true }));
     }
 
     const optimisticEvent: any = {
@@ -247,7 +233,14 @@ const IndividualConsole: React.FC = () => {
       player: playerId ? players.find(p => p.id === playerId) : null
     };
 
-    setEvents(prev => [optimisticEvent, ...prev].slice(0, 20));
+    setEvents(prev => [optimisticEvent, ...prev].slice(0, 40));
+
+    // Se for golo, atualiza logo a tabela matches para refletir em todos os perfis
+    if (type === 'goal') {
+      const newHomeScore = (match.home_score || 0) + (team === 'home' ? 1 : 0);
+      const newAwayScore = (match.away_score || 0) + (team === 'away' ? 1 : 0);
+      await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq('id', id);
+    }
 
     await supabase.from('match_events').insert([{
         id: validUUID,
@@ -261,18 +254,17 @@ const IndividualConsole: React.FC = () => {
     }]);
   };
 
-  const deleteEvent = async (eventId: string) => {
+  const deleteEvent = async (eventId: string, type: EventType, team: 'home' | 'away') => {
       if (!window.confirm("Pretende anular este evento permanentemente?")) return;
       
-      const previousEvents = [...events];
-      setEvents(prev => prev.filter(ev => ev.id !== eventId)); 
-
-      const { error } = await supabase.from('match_events').delete().eq('id', eventId);
-      if (error) {
-          console.error("Erro ao apagar evento:", error);
-          setEvents(previousEvents); 
-          alert("Erro ao apagar evento.");
+      if (type === 'goal' && match) {
+          const newHomeScore = Math.max(0, (match.home_score || 0) - (team === 'home' ? 1 : 0));
+          const newAwayScore = Math.max(0, (match.away_score || 0) - (team === 'away' ? 1 : 0));
+          await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq('id', id);
       }
+
+      setEvents(prev => prev.filter(ev => ev.id !== eventId)); 
+      await supabase.from('match_events').delete().eq('id', eventId);
   };
   
   const liveScore = useMemo(() => {
@@ -282,57 +274,41 @@ const IndividualConsole: React.FC = () => {
   const displayMinutes = Math.floor(serverGameTime / 60).toString().padStart(2, '0');
   const displaySeconds = (serverGameTime % 60).toString().padStart(2, '0');
 
-  // Lógica de Separação de Equipas
   const myTeamSide = match?.my_team_side || 'home'; 
   const opponentSide = myTeamSide === 'home' ? 'away' : 'home';
 
-  const myPlayers = players.filter(p => p.team === myTeamSide);
-  const opponentPlayers = players.filter(p => p.team === opponentSide);
-
-  // Lógica de Filtragem (Quem está em campo vs Banco)
   const getActiveAndBench = (teamPlayers: Player[]) => {
       const active: Player[] = [];
       const bench: Player[] = [];
-      
-      // Ordenar por número
       const sorted = [...teamPlayers].sort((a,b) => a.number - b.number);
-      
       sorted.forEach(p => {
-          // Default: se não há registo no mapa, usa o is_starter. Se houver, usa o mapa.
           const isOnPitch = playersOnPitch[p.id] !== undefined ? playersOnPitch[p.id] : p.is_starter;
-          if (isOnPitch) active.push(p);
-          else bench.push(p);
+          if (isOnPitch) active.push(p); else bench.push(p);
       });
       return { active, bench };
   };
 
-  const mySquad = getActiveAndBench(myPlayers);
-  const opponentSquad = getActiveAndBench(opponentPlayers);
+  const mySquad = getActiveAndBench(players.filter(p => p.team === myTeamSide));
+  const opponentSquad = getActiveAndBench(players.filter(p => p.team === opponentSide));
 
   return (
     <div className="flex flex-col h-screen bg-dark-bg text-gray-200 overflow-hidden font-sans">
-      {/* Top Bar */}
       <div className="bg-black border-b border-dark-border h-16 flex items-center justify-between px-6 shrink-0 z-20 relative">
         <div className="flex items-center gap-4 w-1/3">
           <button onClick={() => navigate('/matches')} className="text-gray-500 hover:text-brand transition"><ArrowLeft size={18} /></button>
           <img src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png" className="h-8" alt="Logo" />
           <div className="flex flex-col ml-2 border-l border-gray-800 pl-3">
              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Live Console</span>
-             <span className="text-[10px] text-gray-500 font-mono">Individual Stats</span>
+             <span className="text-[10px] text-gray-500 font-mono">Individual Stats v2.0 SYNC</span>
           </div>
         </div>
 
-        {/* Scoreboard */}
         <div className="absolute left-1/2 top-0 -translate-x-1/2 bg-dark-surface h-full flex flex-row items-center justify-center gap-6 px-6 border-x border-dark-border/50 shadow-2xl min-w-[500px]">
-           <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-right w-32 truncate hidden md:block">
-              {match?.home_team || 'HOME'}
-           </div>
+           <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-right w-32 truncate hidden md:block">{match?.home_team}</div>
            <div className="text-3xl font-mono font-bold text-white tracking-widest leading-none">
              {liveScore.home}<span className="text-brand mx-2">:</span>{liveScore.away}
            </div>
-           <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-left w-32 truncate hidden md:block">
-              {match?.away_team || 'AWAY'}
-           </div>
+           <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-left w-32 truncate hidden md:block">{match?.away_team}</div>
            <div className="h-8 w-px bg-dark-border mx-2"></div>
            <div className="flex items-center justify-center gap-2">
               <span className="text-[10px] uppercase font-bold text-gray-600 tracking-wider">SYNC TIME</span>
@@ -350,7 +326,6 @@ const IndividualConsole: React.FC = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Video & Feed */}
         <div className="w-5/12 flex flex-col border-r border-dark-border bg-black relative">
             <div className="w-full border-b border-dark-border relative shadow-lg">
                  <div className="aspect-video bg-black">
@@ -360,8 +335,8 @@ const IndividualConsole: React.FC = () => {
                             url={match.youtube_url} 
                             width="100%" 
                             height="100%" 
-                            controls={true}  // Habilitar controlos
-                            playing={true}   // Tentar autoplay
+                            controls={true} 
+                            playing={true} 
                             muted={true} 
                         />
                     )}
@@ -386,10 +361,8 @@ const IndividualConsole: React.FC = () => {
                                 >
                                     <PlayCircle size={14} />
                                 </button>
-                                {ev.type === 'sub_in' && <UserPlus size={12} className="text-green-500" />}
-                                {ev.type === 'sub_out' && <UserMinus size={12} className="text-red-500" />}
                                 <button 
-                                    onClick={() => deleteEvent(ev.id)}
+                                    onClick={() => deleteEvent(ev.id, ev.type, ev.team)}
                                     className="text-gray-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                     title="Apagar Registo"
                                 >
@@ -403,28 +376,19 @@ const IndividualConsole: React.FC = () => {
             </div>
         </div>
 
-        {/* Right: Dual Player Lists */}
         <div className="w-7/12 flex bg-dark-bg">
-           
-           {/* COLUNA 1: NOSSA EQUIPA */}
            <div className="flex-1 flex flex-col border-r border-dark-border">
                <div className="bg-dark-surface p-3 border-b border-dark-border flex justify-between items-center sticky top-0 z-10">
-                    <h2 className="text-sm font-bold text-white uppercase tracking-widest border-l-4 border-brand pl-2">
-                        {myTeamSide === 'home' ? match?.home_team : match?.away_team}
-                    </h2>
+                    <h2 className="text-sm font-bold text-white uppercase tracking-widest border-l-4 border-brand pl-2">{myTeamSide === 'home' ? match?.home_team : match?.away_team}</h2>
                     <span className="text-[10px] bg-brand text-black px-2 py-0.5 rounded font-bold">MINHA EQUIPA</span>
                </div>
-               
                <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-                   {/* Em Campo - Prioridade */}
                    <div className="mb-4">
                        <h3 className="text-[9px] text-brand font-bold uppercase mb-2 tracking-widest flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-brand animate-pulse"></div> Em Campo</h3>
                        {mySquad.active.map(player => (
                            <OurPlayerRow key={player.id} player={player} isOnPitch={true} onAction={(type) => addEvent(type, myTeamSide, player.id)} />
                        ))}
                    </div>
-                   
-                   {/* Banco */}
                    <div className="border-t border-dark-border pt-4">
                        <h3 className="text-[9px] text-gray-500 font-bold uppercase mb-2 tracking-widest">Banco de Suplentes</h3>
                        {mySquad.bench.map(player => (
@@ -433,25 +397,18 @@ const IndividualConsole: React.FC = () => {
                    </div>
                </div>
            </div>
-
-           {/* COLUNA 2: ADVERSÁRIO */}
            <div className="w-1/3 flex flex-col bg-dark-surface/50">
                <div className="bg-dark-surface p-3 border-b border-dark-border flex justify-between items-center sticky top-0 z-10">
-                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-l-4 border-gray-600 pl-2">
-                        {opponentSide === 'home' ? match?.home_team : match?.away_team}
-                    </h2>
+                    <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-l-4 border-gray-600 pl-2">{opponentSide === 'home' ? match?.home_team : match?.away_team}</h2>
                     <span className="text-[10px] bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-bold">ADVERSÁRIO</span>
                </div>
-               
                <div className="flex-1 overflow-y-auto p-2">
-                   {/* Em Campo */}
                    <div className="mb-4">
                         <h3 className="text-[9px] text-gray-400 font-bold uppercase mb-2 tracking-widest">Em Campo</h3>
                         {opponentSquad.active.map(player => (
                             <OpponentPlayerRow key={player.id} player={player} isOnPitch={true} onAction={(type) => addEvent(type, opponentSide, player.id)} />
                         ))}
                    </div>
-                    {/* Banco */}
                    <div className="border-t border-dark-border pt-4">
                         <h3 className="text-[9px] text-gray-600 font-bold uppercase mb-2 tracking-widest">Banco</h3>
                         {opponentSquad.bench.map(player => (
@@ -460,7 +417,6 @@ const IndividualConsole: React.FC = () => {
                    </div>
                </div>
            </div>
-
         </div>
       </div>
     </div>
