@@ -263,7 +263,6 @@ const AnalysisConsole: React.FC = () => {
       const { data: playerData } = await supabase.from('players').select('*').eq('match_id', id).order('number', { ascending: true });
       if (playerData) {
           setPlayers(playerData);
-          // Inicializar estado dos jogadores (Baseado em is_starter)
           const initialPitchState: Record<string, boolean> = {};
           playerData.forEach(p => { initialPitchState[p.id] = p.is_starter; });
           setPlayersOnPitch(initialPitchState);
@@ -274,8 +273,9 @@ const AnalysisConsole: React.FC = () => {
     };
     loadData();
 
-    const subscription = supabase
-      .channel('public:match_events')
+    // Sincronização de Eventos
+    const eventSub = supabase
+      .channel('analysis_events')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, (payload) => {
          if (payload.eventType === 'INSERT') {
             setEvents(prev => {
@@ -288,15 +288,41 @@ const AnalysisConsole: React.FC = () => {
          }
       })
       .subscribe();
-    return () => { supabase.removeChannel(subscription); };
-  }, [id, role]);
 
+    // Sincronização da Tabela Matches (Resultado, Tempo, Posse)
+    const matchSub = supabase
+      .channel('analysis_match_sync')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
+          const newMatch = payload.new as Match;
+          setMatch(newMatch);
+          // Se não estivermos a controlar o timer ativamente (apenas observando), sincronizamos
+          if (!isTimerRunning) {
+             if (newMatch.current_game_seconds !== undefined) setTimerSeconds(newMatch.current_game_seconds);
+          }
+          if (newMatch.current_half !== undefined) setCurrentHalf(newMatch.current_half as 1 | 2);
+          if (newMatch.possession_home !== undefined || newMatch.possession_away !== undefined) {
+             setPossession({ 
+               home: newMatch.possession_home || 0, 
+               away: newMatch.possession_away || 0 
+             });
+          }
+      })
+      .subscribe();
+
+    return () => { 
+      supabase.removeChannel(eventSub); 
+      supabase.removeChannel(matchSub);
+    };
+  }, [id, role, isTimerRunning]);
+
+  // Master Timer Sync (Frequência aumentada para 2s)
   useEffect(() => {
     if (isTimerRunning) {
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds(prev => {
             const next = prev + 1;
-            if (next % 10 === 0 && id) {
+            // Sincroniza com o servidor a cada 2 segundos para máxima precisão entre perfis
+            if (next % 2 === 0 && id) {
                  supabase.from('matches').update({ current_game_seconds: next }).eq('id', id).then();
             }
             return next;
@@ -334,13 +360,14 @@ const AnalysisConsole: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Possession Sync (Frequência aumentada para 2s)
   useEffect(() => {
     if (possessionInterval.current) clearInterval(possessionInterval.current);
     if (activePossession && id) {
       possessionInterval.current = window.setInterval(() => {
         setPossession(prev => {
-           const nextVal = prev[activePossession] + 1;
-           if (nextVal % 5 === 0) {
+           const nextVal = (prev[activePossession] || 0) + 1;
+           if (nextVal % 2 === 0) {
               const updateKey = activePossession === 'home' ? 'possession_home' : 'possession_away';
               supabase.from('matches').update({ [updateKey]: nextVal }).eq('id', id).then();
            }
@@ -354,7 +381,6 @@ const AnalysisConsole: React.FC = () => {
   const addEvent = async (type: EventType, team: 'home' | 'away', playerId?: string) => {
     if (!match || !id) return;
 
-    // Validação de 11 jogadores se for entrada
     if (type === 'sub_in' && playerId) {
         const teamPlayers = players.filter(p => p.team === team);
         const activeCount = teamPlayers.filter(p => playersOnPitch[p.id] !== undefined ? playersOnPitch[p.id] : p.is_starter).length;
@@ -368,7 +394,6 @@ const AnalysisConsole: React.FC = () => {
     const matchMinute = Math.floor(timerSeconds / 60) + 1; 
     const validUUID = generateUUID();
 
-    // Atualizar estado local de quem está em campo
     if (playerId) {
         if (type === 'sub_out') setPlayersOnPitch(prev => ({ ...prev, [playerId]: false }));
         else if (type === 'sub_in') setPlayersOnPitch(prev => ({ ...prev, [playerId]: true }));
@@ -410,9 +435,13 @@ const AnalysisConsole: React.FC = () => {
 
   const updateMatchScore = async (team: 'home' | 'away', increment: number) => {
       if (!match || !id) return;
-      const newHomeScore = team === 'home' ? match.home_score + increment : match.home_score;
-      const newAwayScore = team === 'away' ? match.away_score + increment : match.away_score;
+      const newHomeScore = Math.max(0, (match.home_score || 0) + (team === 'home' ? increment : 0));
+      const newAwayScore = Math.max(0, (match.away_score || 0) + (team === 'away' ? increment : 0));
+      
+      // Atualização imediata local (otimista)
       setMatch(prev => prev ? { ...prev, home_score: newHomeScore, away_score: newAwayScore } : null);
+      
+      // Persistência
       await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq('id', id);
   };
 
@@ -443,9 +472,9 @@ const AnalysisConsole: React.FC = () => {
   }
 
   const liveScore = useMemo(() => ({
-    home: events.filter(e => e.team === 'home' && e.type === 'goal').length,
-    away: events.filter(e => e.team === 'away' && e.type === 'goal').length
-  }), [events]);
+    home: match?.home_score || 0,
+    away: match?.away_score || 0
+  }), [match]);
 
   const stats = useMemo(() => {
     const calc = (team: 'home' | 'away', type: EventType) => events.filter(e => e.team === team && e.type === type).length;
@@ -478,12 +507,11 @@ const AnalysisConsole: React.FC = () => {
     return { home: calcTeamTime('home'), away: calcTeamTime('away') };
   }, [events, timerSeconds]);
 
-  const totalTime = possession.home + possession.away || 1;
+  const totalTime = (possession.home || 0) + (possession.away || 0) || 1;
   const homePossessionPct = Math.round((possession.home / totalTime) * 100);
   const displayMinutes = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
   const displaySeconds = (timerSeconds % 60).toString().padStart(2, '0');
 
-  // Lógica de Separação de Equipas para Individual
   const myTeamSide = match?.my_team_side || 'home'; 
   const opponentSide = myTeamSide === 'home' ? 'away' : 'home';
 
@@ -503,18 +531,16 @@ const AnalysisConsole: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-dark-bg text-gray-200 overflow-hidden font-sans">
-      {/* Top Bar */}
       <div className="bg-black border-b border-dark-border h-16 flex items-center justify-between px-6 shrink-0 z-20 relative">
         <div className="flex items-center gap-4 w-1/3">
           <button onClick={() => navigate('/matches')} className="text-gray-500 hover:text-brand transition"><ArrowLeft size={18} /></button>
           <img src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png" className="h-8" alt="Logo" />
           <div className="flex flex-col ml-2 border-l border-gray-800 pl-3">
              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Live Console</span>
-             <span className="text-[10px] text-gray-500 font-mono">System v1.9</span>
+             <span className="text-[10px] text-gray-500 font-mono">System v2.0 SYNC</span>
           </div>
         </div>
 
-        {/* Central Scoreboard */}
         <div className="absolute left-1/2 top-0 -translate-x-1/2 bg-dark-surface h-full flex flex-row items-center justify-center gap-6 px-6 border-x border-dark-border/50 shadow-2xl min-w-[500px]">
            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-right w-32 truncate hidden md:block">{match?.home_team}</div>
            <div className="text-3xl font-mono font-bold text-white tracking-widest">{liveScore.home}<span className="text-brand mx-2">:</span>{liveScore.away}</div>
@@ -542,7 +568,6 @@ const AnalysisConsole: React.FC = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Video */}
         <div className="w-5/12 flex flex-col border-r border-dark-border bg-black relative justify-center">
             <div className="aspect-video bg-black shadow-lg">
                 {match?.youtube_url ? (
@@ -553,16 +578,13 @@ const AnalysisConsole: React.FC = () => {
             </div>
         </div>
 
-        {/* Right: Controls */}
         <div className="w-7/12 flex flex-col bg-dark-surface overflow-hidden">
            <div className="flex border-b border-dark-border shrink-0">
-              {/* O analistacol apenas vê o painel coletivo */}
               {role === 'analistacol' && (
                 <button onClick={() => setActiveTab('collective')} className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest border-b-2 transition ${activeTab === 'collective' ? 'border-brand text-brand bg-brand/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
                    <Layers size={14} /> Painel Coletivo
                 </button>
               )}
-              {/* Bloqueia a versão admin e analistaind para o coletivo (vêem apenas individual) */}
               {(role === 'admin' || role === 'analistaind') && (
                 <button onClick={() => setActiveTab('individual')} className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest border-b-2 transition ${activeTab === 'individual' ? 'border-brand text-brand bg-brand/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
                    <User size={14} /> Painel Individual
@@ -622,7 +644,6 @@ const AnalysisConsole: React.FC = () => {
                  </div>
               ) : (
                   <div className="flex h-full">
-                     {/* Nossa Equipa */}
                      <div className="flex-1 flex flex-col border-r border-dark-border">
                          <div className="bg-dark-surface p-3 border-b border-dark-border flex justify-between items-center sticky top-0 z-10">
                               <h2 className="text-sm font-bold text-white uppercase tracking-widest border-l-4 border-brand pl-2">{myTeamSide === 'home' ? match?.home_team : match?.away_team}</h2>
@@ -643,7 +664,6 @@ const AnalysisConsole: React.FC = () => {
                              </div>
                          </div>
                      </div>
-                     {/* Adversário */}
                      <div className="w-1/3 flex flex-col bg-dark-surface/50">
                          <div className="bg-dark-surface p-3 border-b border-dark-border flex justify-between items-center sticky top-0 z-10">
                               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest border-l-4 border-gray-600 pl-2">{opponentSide === 'home' ? match?.home_team : match?.away_team}</h2>
@@ -666,7 +686,7 @@ const AnalysisConsole: React.FC = () => {
            </div>
            <div className="bg-dark-surface p-2 border-t border-dark-border text-[10px] text-gray-600 flex justify-between font-mono shrink-0">
               <span>Posse: A (Casa) | S (Stop) | D (Fora)</span>
-              <span>VPRO3 SYSTEM ANALYST</span>
+              <span>VPRO3 SYSTEM ANALYST v2.0</span>
            </div>
         </div>
       </div>
