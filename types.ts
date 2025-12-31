@@ -11,7 +11,7 @@ export interface Match {
   id: string;
   home_team: string;
   away_team: string;
-  my_team_side: 'home' | 'away'; // 'home' se a nossa equipa joga em casa, 'away' se fora
+  my_team_side: 'home' | 'away'; 
   date: string;
   time: string;
   location: string;
@@ -24,6 +24,7 @@ export interface Match {
   current_half?: number; 
   possession_home?: number; 
   possession_away?: number; 
+  is_timer_running?: boolean;
   created_at?: string;
 }
 
@@ -33,7 +34,7 @@ export interface Player {
   name: string;
   number: number;
   team: 'home' | 'away'; 
-  is_starter: boolean; // True para os primeiros 11
+  is_starter: boolean; 
 }
 
 export interface MatchEvent {
@@ -64,8 +65,8 @@ export type EventType =
   | 'offside' 
   | 'ball_loss' 
   | 'ball_recovery'
-  | 'sub_in'    // Entrada
-  | 'sub_out'   // Saída
+  | 'sub_in'    
+  | 'sub_out'   
   | 'possession_update'; 
 
 export interface PossessionStats {
