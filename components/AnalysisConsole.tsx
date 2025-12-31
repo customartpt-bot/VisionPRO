@@ -255,6 +255,7 @@ const AnalysisConsole: React.FC = () => {
       if (matchData) {
           if (matchData.current_game_seconds) setTimerSeconds(matchData.current_game_seconds);
           if (matchData.current_half) setCurrentHalf(matchData.current_half as 1 | 2);
+          if (matchData.is_timer_running !== undefined) setIsTimerRunning(matchData.is_timer_running);
           const savedHome = matchData.possession_home || 0;
           const savedAway = matchData.possession_away || 0;
           setPossession({ home: savedHome, away: savedAway });
@@ -275,7 +276,7 @@ const AnalysisConsole: React.FC = () => {
 
     // Sincronização de Eventos
     const eventSub = supabase
-      .channel('analysis_events')
+      .channel(`analysis_events_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, (payload) => {
          if (payload.eventType === 'INSERT') {
             setEvents(prev => {
@@ -291,14 +292,10 @@ const AnalysisConsole: React.FC = () => {
 
     // Sincronização da Tabela Matches (Resultado, Tempo, Posse)
     const matchSub = supabase
-      .channel('analysis_match_sync')
+      .channel(`analysis_match_sync_${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
           const newMatch = payload.new as Match;
           setMatch(newMatch);
-          // Se não estivermos a controlar o timer ativamente (apenas observando), sincronizamos
-          if (!isTimerRunning) {
-             if (newMatch.current_game_seconds !== undefined) setTimerSeconds(newMatch.current_game_seconds);
-          }
           if (newMatch.current_half !== undefined) setCurrentHalf(newMatch.current_half as 1 | 2);
           if (newMatch.possession_home !== undefined || newMatch.possession_away !== undefined) {
              setPossession({ 
@@ -313,15 +310,14 @@ const AnalysisConsole: React.FC = () => {
       supabase.removeChannel(eventSub); 
       supabase.removeChannel(matchSub);
     };
-  }, [id, role, isTimerRunning]);
+  }, [id, role]);
 
-  // Master Timer Sync (Frequência aumentada para 2s)
+  // Master Timer Sync (Frequência agressiva a cada 2s)
   useEffect(() => {
     if (isTimerRunning) {
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds(prev => {
             const next = prev + 1;
-            // Sincroniza com o servidor a cada 2 segundos para máxima precisão entre perfis
             if (next % 2 === 0 && id) {
                  supabase.from('matches').update({ current_game_seconds: next }).eq('id', id).then();
             }
@@ -337,8 +333,11 @@ const AnalysisConsole: React.FC = () => {
   const toggleTimer = async () => {
       const newState = !isTimerRunning;
       setIsTimerRunning(newState);
-      if (!newState && id) {
-          await supabase.from('matches').update({ current_game_seconds: timerSeconds }).eq('id', id);
+      if (id) {
+          await supabase.from('matches').update({ 
+            is_timer_running: newState, 
+            current_game_seconds: timerSeconds 
+          }).eq('id', id);
       }
   };
 
@@ -438,10 +437,7 @@ const AnalysisConsole: React.FC = () => {
       const newHomeScore = Math.max(0, (match.home_score || 0) + (team === 'home' ? increment : 0));
       const newAwayScore = Math.max(0, (match.away_score || 0) + (team === 'away' ? increment : 0));
       
-      // Atualização imediata local (otimista)
       setMatch(prev => prev ? { ...prev, home_score: newHomeScore, away_score: newAwayScore } : null);
-      
-      // Persistência
       await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq('id', id);
   };
 
@@ -457,7 +453,10 @@ const AnalysisConsole: React.FC = () => {
       if(!window.confirm("Reiniciar cronómetro de jogo para 00:00?")) return;
       setIsTimerRunning(false);
       setTimerSeconds(0);
-      if (id) await supabase.from('matches').update({ current_game_seconds: 0 }).eq('id', id);
+      if (id) await supabase.from('matches').update({ 
+        current_game_seconds: 0,
+        is_timer_running: false
+      }).eq('id', id);
   }
 
   const handleTimeEdit = (minutes: string) => {
@@ -547,7 +546,7 @@ const AnalysisConsole: React.FC = () => {
            <div className="text-sm font-bold text-gray-400 uppercase tracking-wide text-left w-32 truncate hidden md:block">{match?.away_team}</div>
            <div className="h-8 w-px bg-dark-border mx-2"></div>
            <div className="flex items-center gap-1 bg-black/40 p-1 rounded border border-dark-border/30">
-              <button onClick={() => updateHalf(1)} className={`text-[9px] font-bold px-2 py-1 rounded transition uppercase ${currentHalf === 1 ? 'bg-brand text-black' : 'text-gray-500 hover:text-white'}`}>1ª P</button>
+              <button onClick={() => updateHalf(1)} className={`text-[9px] font-bold px-2 py-1 rounded transition uppercase ${currentHalf === 1 ? 'bg-brand text-black' : 'text-gray-600 hover:text-white'}`}>1ª P</button>
               <button onClick={() => updateHalf(2)} className={`text-[9px] font-bold px-2 py-1 rounded transition uppercase ${currentHalf === 2 ? 'bg-brand text-black' : 'text-gray-500 hover:text-white'}`}>2ª P</button>
            </div>
            <div className="h-8 w-px bg-dark-border mx-2"></div>
