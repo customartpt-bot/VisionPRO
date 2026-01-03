@@ -138,12 +138,13 @@ const IndividualConsole: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const playerRef = useRef<ReactPlayer>(null);
-  const role = localStorage.getItem('userRole') || 'analista';
+  const role = localStorage.getItem('userRole') || 'analistaind';
   
   const [match, setMatch] = useState<Match | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [events, setEvents] = useState<MatchEvent[]>([]); 
   const [serverGameTime, setServerGameTime] = useState(0); 
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [playersOnPitch, setPlayersOnPitch] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -153,6 +154,7 @@ const IndividualConsole: React.FC = () => {
       const { data: matchData } = await supabase.from('matches').select('*').eq('id', id).single();
       setMatch(matchData);
       if (matchData?.current_game_seconds) setServerGameTime(matchData.current_game_seconds);
+      if (matchData?.is_timer_running) setIsTimerRunning(matchData.is_timer_running);
 
       const { data: playerData } = await supabase.from('players').select('*').eq('match_id', id).order('number', { ascending: true });
       if (playerData) {
@@ -167,19 +169,25 @@ const IndividualConsole: React.FC = () => {
     };
     loadData();
 
-    // Sincronização em tempo real da tabela Matches (Tempo e Placar)
-    const matchSub = supabase
-      .channel('individual_console_match_sync')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
-          const newMatch = payload.new as Match;
-          setMatch(newMatch);
-          if (newMatch.current_game_seconds !== undefined) setServerGameTime(newMatch.current_game_seconds);
+    // Sincronização em tempo real via Broadcast (Prioritário)
+    const channel = supabase.channel(`match_sync_${id}`)
+      .on('broadcast', { event: 'timer_tick' }, ({ payload }) => {
+          setServerGameTime(payload.seconds);
+          setIsTimerRunning(payload.is_running);
       })
       .subscribe();
 
-    // Sincronização em tempo real de Eventos (Golos de outros analistas, etc)
+    // Fallback: Sincronização via Postgres Changes
+    const matchSub = supabase
+      .channel('individual_match_sync_fallback')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
+          const newMatch = payload.new as Match;
+          setMatch(prev => ({...prev, ...newMatch}));
+      })
+      .subscribe();
+
     const eventSub = supabase
-      .channel('individual_console_events_sync')
+      .channel('individual_events_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, (payload) => {
           if (payload.eventType === 'INSERT') {
              setEvents(prev => {
@@ -196,6 +204,7 @@ const IndividualConsole: React.FC = () => {
     return () => { 
       supabase.removeChannel(matchSub); 
       supabase.removeChannel(eventSub);
+      supabase.removeChannel(channel);
     };
   }, [id]);
 
@@ -235,11 +244,10 @@ const IndividualConsole: React.FC = () => {
 
     setEvents(prev => [optimisticEvent, ...prev].slice(0, 40));
 
-    // Se for golo, atualiza logo a tabela matches para refletir em todos os perfis
     if (type === 'goal') {
       const newHomeScore = (match.home_score || 0) + (team === 'home' ? 1 : 0);
       const newAwayScore = (match.away_score || 0) + (team === 'away' ? 1 : 0);
-      await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq('id', id);
+      await supabase.from('matches').update({ home_score: newHomeScore, away_score: newAwayScore }).eq(id, id);
     }
 
     await supabase.from('match_events').insert([{
@@ -299,7 +307,7 @@ const IndividualConsole: React.FC = () => {
           <img src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png" className="h-8" alt="Logo" />
           <div className="flex flex-col ml-2 border-l border-gray-800 pl-3">
              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Live Console</span>
-             <span className="text-[10px] text-gray-500 font-mono">Individual Stats v2.0 SYNC</span>
+             <span className="text-[10px] text-gray-500 font-mono">Individual Stats v2.1 SYNC</span>
           </div>
         </div>
 
@@ -314,7 +322,7 @@ const IndividualConsole: React.FC = () => {
               <span className="text-[10px] uppercase font-bold text-gray-600 tracking-wider">SYNC TIME</span>
               <div className="flex items-center text-xl font-mono font-bold text-gray-200 leading-none bg-black px-2 py-1 rounded border border-dark-border">
                  <span>{displayMinutes}</span>
-                 <span className="mx-0.5 text-brand animate-pulse">:</span>
+                 <span className={`mx-0.5 text-brand ${isTimerRunning ? 'animate-pulse' : ''}`}>:</span>
                  <span>{displaySeconds}</span>
               </div>
            </div>
