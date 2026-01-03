@@ -156,7 +156,8 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ matchId, role }) => {
   const stopAudio = () => {
       localStreamRef.current?.getTracks().forEach(t => t.stop());
       localStreamRef.current = null;
-      Object.values(peersRef.current).forEach(pc => pc.close());
+      // Fix: Cast the Object.values output to RTCPeerConnection[] to resolve the 'unknown' type error in stopAudio
+      (Object.values(peersRef.current) as RTCPeerConnection[]).forEach(pc => pc.close());
       peersRef.current = {};
       setActive(false);
   };
