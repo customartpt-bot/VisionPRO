@@ -7,7 +7,7 @@ import { Match, Player, MatchEvent, EventType } from '../types';
 import { 
   ArrowLeft, Layers, User, Clock, Crosshair, Shield, Hand, 
   Timer, Activity, Goal, AlertTriangle, RectangleHorizontal, ShieldAlert, Ban,
-  ArrowUp, ArrowDown, PlayCircle, AlertOctagon
+  ArrowUp, ArrowDown, PlayCircle
 } from 'lucide-react';
 import VoiceChat from './VoiceChat';
 
@@ -188,23 +188,36 @@ const CoachDashboard: React.FC = () => {
     };
     loadData();
 
+    // 1. Canal de Broadcast (Escuta instantânea do Analista Mestre)
+    const channel = supabase.channel(`match_sync_${id}`)
+      .on('broadcast', { event: 'timer_tick' }, ({ payload }) => {
+          setTimerSeconds(payload.seconds);
+          setIsTimerRunning(payload.is_running);
+      })
+      .subscribe();
+
+    // 2. Sincronização de Estatísticas (Eventos)
     const eventSub = supabase
       .channel(`dashboard_events_${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: `match_id=eq.${id}` }, (payload) => {
          if (payload.eventType === 'INSERT') {
-            setEvents(prev => [payload.new as MatchEvent, ...prev]);
+            setEvents(prev => {
+                const exists = prev.find(e => e.id === payload.new.id);
+                if (exists) return prev;
+                return [payload.new as MatchEvent, ...prev];
+            });
          } else if (payload.eventType === 'DELETE') {
              setEvents(prev => prev.filter(e => e.id !== payload.old.id));
          }
       })
       .subscribe();
 
+    // 3. Sincronização de Placar e Posse
     const matchSub = supabase
       .channel(`dashboard_match_${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${id}` }, (payload) => {
           const newMatch = payload.new as Match;
-          setMatch(newMatch);
-          if (newMatch.current_game_seconds !== undefined) setTimerSeconds(newMatch.current_game_seconds);
+          setMatch(prev => ({ ...prev, ...newMatch }));
           if (newMatch.is_timer_running !== undefined) setIsTimerRunning(newMatch.is_timer_running);
       })
       .subscribe();
@@ -212,10 +225,11 @@ const CoachDashboard: React.FC = () => {
     return () => { 
         supabase.removeChannel(eventSub); 
         supabase.removeChannel(matchSub);
+        supabase.removeChannel(channel);
     };
   }, [id]);
 
-  // Cronómetro Local Interpolado (Garante que o tempo corre no Dashboard sem refresh)
+  // Cronómetro Local Interpolado (Garante suavidade se o sinal de broadcast falhar momentaneamente)
   useEffect(() => {
       if (isTimerRunning) {
           localTimerRef.current = setInterval(() => {
@@ -299,7 +313,7 @@ const CoachDashboard: React.FC = () => {
           <img src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png" className="h-8" alt="Logo" />
           <div className="flex flex-col ml-2 border-l border-gray-800 pl-3">
              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Live Dashboard</span>
-             <span className="text-[10px] text-gray-500 font-mono">Coach View v2.0</span>
+             <span className="text-[10px] text-gray-500 font-mono">Real-Time View v2.1</span>
           </div>
         </div>
 
@@ -361,7 +375,7 @@ const CoachDashboard: React.FC = () => {
                           <StatCard title="Perda Bola" icon={AlertTriangle} homeValue={stats.home.loss} awayValue={stats.away.loss} />
                           <StatCard title="Recuperação" icon={Shield} homeValue={stats.home.recovery} awayValue={stats.away.recovery} />
                           <StatCard title="Cantos" icon={Activity} homeValue={stats.home.corners} awayValue={stats.away.corners} />
-                          <StatCard title="T. Sem Remate" icon={Timer} homeValue={formatTimeSimple(timeSinceShot.home)} awayValue={formatTimeSimple(timeSinceShot.away)} progressBar={false} helperText="Live Calc" />
+                          <StatCard title="T. Sem Remate" icon={Timer} homeValue={formatTimeSimple(timeSinceShot.home)} awayValue={formatTimeSimple(timeSinceShot.away)} progressBar={false} helperText="Live Sync" />
                      </div>
                      <div className="bg-dark-card border border-dark-border rounded-xl overflow-hidden shadow-lg flex flex-col h-80 shrink-0">
                          <div className="bg-dark-surface p-3 border-b border-dark-border text-[10px] font-bold uppercase text-gray-500 tracking-wider">Event Log</div>
