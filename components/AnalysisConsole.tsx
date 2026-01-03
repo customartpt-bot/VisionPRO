@@ -240,13 +240,31 @@ const AnalysisConsole: React.FC = () => {
   // Estado Local de Quem está em Campo (Individual)
   const [playersOnPitch, setPlayersOnPitch] = useState<Record<string, boolean>>({});
 
+  // Canal de Broadcast para sincronização ultra-rápida
+  const channelRef = useRef<any>(null);
+
   // Initial Load
   useEffect(() => {
     if (!id) return;
     
     // Forçar aba correta baseada na função
-    if (role === 'analistaind' || role === 'admin') setActiveTab('individual');
+    if (role === 'analistaind') setActiveTab('individual');
     else if (role === 'analistacol') setActiveTab('collective');
+    else if (role === 'admin') setActiveTab('collective'); // Admin pode alternar mas começa no coletivo
+
+    // Inicializa Canal de Broadcast e escuta
+    const channel = supabase.channel(`match_sync_${id}`, {
+      config: { broadcast: { self: true } }
+    })
+    .on('broadcast', { event: 'timer_tick' }, ({ payload }) => {
+        // Se não sou o mestre do relógio, aceito o tempo do broadcast
+        if (role !== 'analistacol' && role !== 'admin') {
+            setTimerSeconds(payload.seconds);
+            setIsTimerRunning(payload.is_running);
+        }
+    })
+    .subscribe();
+    channelRef.current = channel;
 
     const loadData = async () => {
       const { data: matchData } = await supabase.from('matches').select('*').eq('id', id).single();
@@ -309,16 +327,28 @@ const AnalysisConsole: React.FC = () => {
     return () => { 
       supabase.removeChannel(eventSub); 
       supabase.removeChannel(matchSub);
+      supabase.removeChannel(channel);
     };
   }, [id, role]);
 
-  // Master Timer Sync (Frequência agressiva a cada 2s)
+  // Master Timer Sync (Analista Coletivo ou Admin envia broadcast a cada segundo)
   useEffect(() => {
     if (isTimerRunning) {
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds(prev => {
             const next = prev + 1;
-            if (next % 2 === 0 && id) {
+            
+            // Se for o mestre do relógio (analistacol ou admin), envia broadcast instantâneo
+            if (role === 'analistacol' || role === 'admin') {
+                channelRef.current?.send({
+                  type: 'broadcast',
+                  event: 'timer_tick',
+                  payload: { seconds: next, is_running: true }
+                });
+            }
+
+            // Backup persistente na DB a cada 5s
+            if (next % 5 === 0 && id && (role === 'analistacol' || role === 'admin')) {
                  supabase.from('matches').update({ current_game_seconds: next }).eq('id', id).then();
             }
             return next;
@@ -326,11 +356,20 @@ const AnalysisConsole: React.FC = () => {
       }, 1000);
     } else {
        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+       // Envia broadcast de paragem
+       if (role === 'analistacol' || role === 'admin') {
+           channelRef.current?.send({
+             type: 'broadcast',
+             event: 'timer_tick',
+             payload: { seconds: timerSeconds, is_running: false }
+           });
+       }
     }
     return () => { if (timerIntervalRef.current) clearInterval(timerIntervalRef.current); };
-  }, [isTimerRunning, id]);
+  }, [isTimerRunning, id, role]);
 
   const toggleTimer = async () => {
+      if (role !== 'analistacol' && role !== 'admin') return; // Só mestre comanda
       const newState = !isTimerRunning;
       setIsTimerRunning(newState);
       if (id) {
@@ -342,6 +381,7 @@ const AnalysisConsole: React.FC = () => {
   };
 
   const updateHalf = async (half: 1 | 2) => {
+      if (role !== 'analistacol' && role !== 'admin') return;
       setCurrentHalf(half);
       if (id) {
           await supabase.from('matches').update({ current_half: half }).eq('id', id);
@@ -350,6 +390,7 @@ const AnalysisConsole: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (role !== 'analistacol' && role !== 'admin') return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key.toLowerCase() === 'a') setActivePossession('home');
       else if (e.key.toLowerCase() === 'd') setActivePossession('away');
@@ -357,12 +398,12 @@ const AnalysisConsole: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [role]);
 
-  // Possession Sync (Frequência aumentada para 2s)
+  // Possession Sync
   useEffect(() => {
     if (possessionInterval.current) clearInterval(possessionInterval.current);
-    if (activePossession && id) {
+    if (activePossession && id && (role === 'analistacol' || role === 'admin')) {
       possessionInterval.current = window.setInterval(() => {
         setPossession(prev => {
            const nextVal = (prev[activePossession] || 0) + 1;
@@ -375,7 +416,7 @@ const AnalysisConsole: React.FC = () => {
       }, 1000);
     }
     return () => { if (possessionInterval.current) clearInterval(possessionInterval.current); };
-  }, [activePossession, id]); 
+  }, [activePossession, id, role]); 
 
   const addEvent = async (type: EventType, team: 'home' | 'away', playerId?: string) => {
     if (!match || !id) return;
@@ -422,7 +463,7 @@ const AnalysisConsole: React.FC = () => {
         video_timestamp: videoTime,
         match_minute: matchMinute,
         game_seconds: timerSeconds,
-    }]).select().single();
+    }]);
 
     if (error) {
         setEvents(prev => prev.filter(e => e.id !== validUUID));
@@ -450,6 +491,7 @@ const AnalysisConsole: React.FC = () => {
   };
   
   const resetTimer = async () => {
+      if (role !== 'analistacol' && role !== 'admin') return;
       if(!window.confirm("Reiniciar cronómetro de jogo para 00:00?")) return;
       setIsTimerRunning(false);
       setTimerSeconds(0);
@@ -460,6 +502,7 @@ const AnalysisConsole: React.FC = () => {
   }
 
   const handleTimeEdit = (minutes: string) => {
+    if (role !== 'analistacol' && role !== 'admin') return;
     const mins = parseInt(minutes);
     if (!isNaN(mins)) setTimerSeconds(mins * 60 + (timerSeconds % 60));
   };
@@ -536,7 +579,7 @@ const AnalysisConsole: React.FC = () => {
           <img src="https://raw.githubusercontent.com/customartpt-bot/fcbfotos/refs/heads/main/VPRO3.png" className="h-8" alt="Logo" />
           <div className="flex flex-col ml-2 border-l border-gray-800 pl-3">
              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">Live Console</span>
-             <span className="text-[10px] text-gray-500 font-mono">System v2.0 SYNC</span>
+             <span className="text-[10px] text-gray-500 font-mono">System v2.1 Master SYNC</span>
           </div>
         </div>
 
@@ -551,13 +594,21 @@ const AnalysisConsole: React.FC = () => {
            </div>
            <div className="h-8 w-px bg-dark-border mx-2"></div>
            <div className="flex items-center gap-2">
-              <button onClick={toggleTimer} className={`text-[10px] transition ${isTimerRunning ? 'text-brand' : 'text-gray-500 hover:text-white'}`}>{isTimerRunning ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
+              <button onClick={toggleTimer} className={`text-[10px] transition ${isTimerRunning ? 'text-brand' : 'text-gray-500 hover:text-white'} ${role !== 'analistacol' && role !== 'admin' ? 'opacity-30 cursor-not-allowed' : ''}`}>
+                 {isTimerRunning ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+              </button>
               <div className="flex items-center text-xl font-mono font-bold text-gray-200 bg-black px-2 py-1 rounded border border-dark-border">
-                 <input type="number" className="bg-transparent w-10 text-center focus:outline-none appearance-none" value={displayMinutes} onChange={(e) => handleTimeEdit(e.target.value)} />
+                 <input 
+                    type="number" 
+                    readOnly={role !== 'analistacol' && role !== 'admin'}
+                    className="bg-transparent w-10 text-center focus:outline-none appearance-none" 
+                    value={displayMinutes} 
+                    onChange={(e) => handleTimeEdit(e.target.value)} 
+                 />
                  <span className={`mx-0.5 ${isTimerRunning ? 'animate-pulse text-brand' : 'text-gray-600'}`}>:</span>
                  <span className="w-6 text-center">{displaySeconds}</span>
               </div>
-               <button onClick={resetTimer} className="text-gray-600 hover:text-red-500"><RotateCcw size={14} /></button>
+               <button onClick={resetTimer} className={`text-gray-600 hover:text-red-500 ${role !== 'analistacol' && role !== 'admin' ? 'hidden' : ''}`}><RotateCcw size={14} /></button>
            </div>
         </div>
 
@@ -579,7 +630,7 @@ const AnalysisConsole: React.FC = () => {
 
         <div className="w-7/12 flex flex-col bg-dark-surface overflow-hidden">
            <div className="flex border-b border-dark-border shrink-0">
-              {role === 'analistacol' && (
+              {(role === 'analistacol' || role === 'admin') && (
                 <button onClick={() => setActiveTab('collective')} className={`flex-1 py-4 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest border-b-2 transition ${activeTab === 'collective' ? 'border-brand text-brand bg-brand/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
                    <Layers size={14} /> Painel Coletivo
                 </button>
@@ -646,7 +697,7 @@ const AnalysisConsole: React.FC = () => {
                      <div className="flex-1 flex flex-col border-r border-dark-border">
                          <div className="bg-dark-surface p-3 border-b border-dark-border flex justify-between items-center sticky top-0 z-10">
                               <h2 className="text-sm font-bold text-white uppercase tracking-widest border-l-4 border-brand pl-2">{myTeamSide === 'home' ? match?.home_team : match?.away_team}</h2>
-                              <span className="text-[9px] bg-brand text-black px-2 py-0.5 rounded font-bold">MINHA EQUIPA</span>
+                              <span className="text-[10px] bg-brand text-black px-2 py-0.5 rounded font-bold">MINHA EQUIPA</span>
                          </div>
                          <div className="flex-1 overflow-y-auto p-2">
                              <div className="mb-4">
@@ -685,7 +736,7 @@ const AnalysisConsole: React.FC = () => {
            </div>
            <div className="bg-dark-surface p-2 border-t border-dark-border text-[10px] text-gray-600 flex justify-between font-mono shrink-0">
               <span>Posse: A (Casa) | S (Stop) | D (Fora)</span>
-              <span>VPRO3 SYSTEM ANALYST v2.0</span>
+              <span>VPRO3 SYSTEM ANALYST v2.1 SYNC</span>
            </div>
         </div>
       </div>
