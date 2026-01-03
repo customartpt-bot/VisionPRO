@@ -77,7 +77,7 @@ const Login: React.FC = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-dark-bg border border-dark-border text-white p-3 rounded focus:outline-none focus:border-brand transition-colors text-sm placeholder-gray-700"
-              placeholder="USERNAME"
+              placeholder="EMAIL"
               autoFocus
             />
           </div>
