@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Match } from '../types';
@@ -52,6 +53,7 @@ const MatchList: React.FC = () => {
   };
 
   const role = getRole();
+  const canCreateMatch = role === 'admin' || role === 'analistacol' || role === 'analista';
 
   return (
     <div className="min-h-screen bg-dark-bg p-8 font-sans">
@@ -71,7 +73,7 @@ const MatchList: React.FC = () => {
              </div>
           </div>
           <div className="flex items-center gap-4">
-            {role !== 'dashboard' && role !== 'analistaind' && role !== 'analistacol' && (
+            {canCreateMatch && (
                 <button
                 onClick={() => navigate('/matches/new')}
                 className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-brand text-white px-4 py-2 rounded text-sm font-bold uppercase transition hover:text-brand"
@@ -132,7 +134,7 @@ const MatchList: React.FC = () => {
                         </div>
                         
                         <div className="flex gap-2">
-                             {role !== 'dashboard' && role !== 'analistaind' && role !== 'analistacol' && (
+                             {canCreateMatch && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); navigate(`/matches/${match.id}/edit`); }}
                                     className="p-2 hover:bg-dark-bg rounded text-gray-500 hover:text-white transition"
