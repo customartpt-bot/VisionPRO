@@ -53,23 +53,23 @@ export interface MatchEvent {
 }
 
 export type EventType = 
-  | 'golo' 
-  | 'assistência'
-  | 'passe_certo' 
-  | 'passe_errado' 
-  | 'remate_alvo' 
-  | 'remate_fora' 
-  | 'falta_cometida' 
-  | 'falta_sofrida' 
-  | 'amarelo' 
-  | 'vermelho' 
-  | 'canto' 
-  | 'fora-de-jogo' 
-  | 'perda_bola' 
-  | 'recuperação_bola'
-  | 'sub_entra'    
-  | 'sub_sai'   
-  | 'posse_update'; 
+  | 'goal' 
+  | 'assist'
+  | 'pass_success' 
+  | 'pass_fail' 
+  | 'shot_on_target' 
+  | 'shot_off_target' 
+  | 'foul_committed' 
+  | 'foul_won' 
+  | 'yellow_card' 
+  | 'red_card' 
+  | 'corner' 
+  | 'offside' 
+  | 'ball_loss' 
+  | 'ball_recovery'
+  | 'sub_in'    
+  | 'sub_out'   
+  | 'possession_update'; 
 
 export interface PossessionStats {
   homeTime: number; 
