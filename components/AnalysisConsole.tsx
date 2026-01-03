@@ -732,7 +732,10 @@ const AnalysisConsole: React.FC = () => {
                                             <div className="text-[9px] text-gray-600 font-bold">{ev.team==='home'?match?.home_team:match?.away_team} {ev.player && `• #${ev.player.number} ${ev.player.name}`}</div>
                                         </div>
                                    </div>
-                                   <button onClick={(e) => {e.stopPropagation(); if(window.confirm("Anular evento?")) supabase.from('match_events').delete().eq('id', ev.id);}} className="text-gray-700 hover:text-red-500 p-1 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
+                                   <div className="flex items-center">
+                                        <button onClick={(e) => {e.stopPropagation(); playerRef.current?.seekTo(ev.video_timestamp, 'seconds'); }} className="text-gray-600 hover:text-brand p-1 transition-colors opacity-0 group-hover:opacity-100 mr-1" title="Ver Vídeo"><PlayCircle size={12} /></button>
+                                        <button onClick={(e) => {e.stopPropagation(); if(window.confirm("Anular evento?")) supabase.from('match_events').delete().eq('id', ev.id);}} className="text-gray-700 hover:text-red-500 p-1 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={12} /></button>
+                                   </div>
                                 </div>
                              ))}
                          </div>
